@@ -30,6 +30,18 @@ import simple_salesforce
 from simple_salesforce import Salesforce, SalesforceMalformedRequest
 import xlsxwriter
 
+import yaml
+
+def load_config(file_path):
+    with open(file_path, 'r') as file:
+        config = yaml.safe_load(file)
+    return config
+
+
+config = load_config('~/keys/project-keys/colab-settings.yaml')
+print(config)
+# test_config = read_config('~/keys/project-keys/colab-settings.yaml')
+
 
 # Function to install and import modules and sub-modules
 # def install_and_import(module_name, package_name=None, names=None, alias=None):
