@@ -1,5 +1,3 @@
-# @title Load Packages
-!pip install simple-salesforce XlsxWriter
 
 import subprocess
 import sys
