@@ -38,6 +38,7 @@ import uuid
 import pyarrow as pa
 import pyarrow.parquet as pq
 import fsspec
+import gc
 
 
 def initialize_clients(file_path='/home/developer/keys/project-keys/colab-settings.yaml', service_account_secret_name='SA_ADHOC_BILLING'):
@@ -322,6 +323,138 @@ def convert_to_string_except_exclusions(df, exclude_columns=None):
                 df[col] = df[col].astype(str)
 
     return df
+
+def fetch_table_data(project_id, dataset_id, table_names, bigquery_client):
+    """
+    Fetch data from BigQuery tables and return a dictionary of DataFrames.
+
+    Args:
+        project_id (str): BigQuery project ID.
+        dataset_id (str): BigQuery dataset ID.
+        table_names (list): List of table names to fetch data from.
+        bigquery_client: BigQuery client object.
+
+    Returns:
+        dict: A dictionary where keys are table names and values are pandas DataFrames.
+    """
+    dataframes = {}
+    for table in table_names:
+        fetch_sql = f"""
+        SELECT * FROM {project_id}.{dataset_id}.{table}
+        """
+        dataframes[table] = fetch_gbq_data(fetch_sql, bigquery_client)
+    return dataframes
+
+def time_to_seconds(time_str):
+    """
+    Convert a time string in HH:MM:SS, MM:SS format, or a plain numeric string to seconds.
+    If the format is invalid, return None.
+    """
+    try:
+        if isinstance(time_str, str):
+            if ":" in time_str:
+                # Handle time in HH:MM:SS or MM:SS format
+                parts = list(map(int, time_str.split(":")))
+                if len(parts) == 3:  # HH:MM:SS
+                    return int(parts[0] * 3600 + parts[1] * 60 + parts[2])
+                elif len(parts) == 2:  # MM:SS
+                    return int(parts[0] * 60 + parts[1])
+            elif time_str.isdigit():  # Plain numeric string
+                return int(time_str)
+        elif isinstance(time_str, (int, float)):  # Already in seconds as a number
+            return int(time_str)
+    except (ValueError, AttributeError):
+        pass
+    return None
+
+def remove_subseconds(timestamp):
+    return timestamp.split('.')[0] + timestamp[-6:] if '.' in timestamp else timestamp
+
+def preprocess_df(
+    df,
+    date_cols=None,
+    int_cols=None,
+    float_cols=None,
+    bool_cols=None,
+    lower_cols=None,
+    str_cols=None,
+    struct_cols=None,
+    to_epoch_cols=None
+):
+    df = df.copy()
+
+    # Process date columns
+    if date_cols:
+        for col in date_cols:
+            df[col] = df[col].fillna('1971-01-01T00:00:00-00:00')
+            df[col] = pd.to_datetime(df[col], errors='coerce', utc=True)
+            if to_epoch_cols and col in to_epoch_cols:
+                # Convert datetime to epoch seconds
+                print(f'Converting {col} to epoch seconds')
+                df[col + '_epoch'] = df[col].apply(lambda x: int(x.timestamp()) if pd.notna(x) else 0)
+    # Process int columns
+    if int_cols:
+        for col in int_cols:
+            fill_value = 0 if col == 'clone_of' else -1
+            df[col] = df[col].fillna(fill_value).astype('int')
+
+    # Process float columns
+    if float_cols:
+        for col in float_cols:
+            df[col] = df[col].fillna(-1.0).astype('float')
+
+    # Process boolean columns
+    if bool_cols:
+        for col in bool_cols:
+            df[col] = df[col].fillna(False).astype('bool')
+
+    # Process lowercase string columns
+    if lower_cols:
+        for col in lower_cols:
+            df[col] = df[col].str.lower()
+
+    # Process general string columns
+    if str_cols:
+        for col in str_cols:
+            df[col] = df[col].fillna('').astype('str')
+
+    # Process struct columns
+    if struct_cols:
+        for col in struct_cols:
+            # Check if the column has valid struct rows
+            if df[col].notna().any():
+                struct_keys = df[col].dropna().iloc[0].keys()  # Safely get keys from the first non-null struct
+                for key in struct_keys:
+                    if key == 'length':
+                        df['length_in_seconds'] = (
+                            df[col]
+                            .apply(lambda x: core_functions.time_to_seconds(x.get(key)) if x else None)
+                            .fillna(0)
+                            .astype(int)
+                        )
+                    df[col + '_' + key] = df[col].apply(lambda x: x.get(key) if x else None)
+
+    return df
+
+def delete_all_dataframes():
+    """
+    Delete all pandas DataFrame objects in the global namespace and trigger garbage collection.
+    """
+    # Get a list of all variables in the global namespace
+    global_vars = globals()
+    
+    # Identify variables that are pandas DataFrames
+    df_vars = [var for var in global_vars if isinstance(global_vars[var], pd.DataFrame)]
+    
+    # Delete each DataFrame variable
+    for var in df_vars:
+        print(f"Deleting DataFrame: {var}")
+        del global_vars[var]
+    
+    # Trigger garbage collection
+    gc.collect()
+    print("Garbage collection completed. All DataFrame objects have been deleted.")
+    
 # # Insert salesforce
 # def insert_salesforce(object_name, records, batch_size=500):
 #     """
