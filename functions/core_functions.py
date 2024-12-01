@@ -30,6 +30,15 @@ import simple_salesforce
 from simple_salesforce import Salesforce, SalesforceMalformedRequest
 import xlsxwriter
 import yaml
+import s3fs
+import gcsfs
+# import boto3
+import os
+import uuid
+import pyarrow as pa
+import pyarrow.parquet as pq
+import fsspec
+
 
 def initialize_clients(file_path='/home/developer/keys/project-keys/colab-settings.yaml', service_account_secret_name='SA_ADHOC_BILLING'):
     """
@@ -240,7 +249,79 @@ def clean_record(record):
 def generate_uuid():
     return str(uuid.uuid4())
 
+def write_hive_partitioned_parquet(df, output_bucket, output_prefix, partition_cols, gcs_options, max_records_per_file=1_000_000):
+    import math
+    import uuid
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+    import fsspec
 
+    fs = fsspec.filesystem('gcs', **gcs_options)  # Initialize GCS filesystem
+    
+    # Group by partitions
+    grouped = df.groupby(partition_cols)
+    
+    for keys, group in grouped:
+        # Drop partition columns from the data
+        group = group.drop(columns=partition_cols)
+        
+        # Create subdirectory for this partition
+        partition_subdir = "/".join([f"{col}={val}" for col, val in zip(partition_cols, keys)])
+        partition_path = f"gcs://{output_bucket}/{output_prefix}/{partition_subdir}"
+        
+        # Split into chunks if necessary
+        num_chunks = math.ceil(len(group) / max_records_per_file)
+        
+        for chunk_idx in range(num_chunks):
+            chunk = group.iloc[chunk_idx * max_records_per_file : (chunk_idx + 1) * max_records_per_file]
+            
+            # Generate a unique filename with UUID
+            unique_filename = f"data-{uuid.uuid4().hex}.parquet"
+            file_path = f"{partition_path}/{unique_filename}"
+            
+            # Write Parquet file for this partition
+            table = pa.Table.from_pandas(chunk, preserve_index=False)
+            with fs.open(file_path, 'wb') as f:
+                pq.write_table(table, f, compression="snappy")
+            
+            print(f"Written file: {file_path}")
+            
+def convert_to_string_except_exclusions(df, exclude_columns=None):
+    """
+    Convert all fields in the DataFrame to strings, including nested fields, except specified columns.
+
+    Args:
+        df (pd.DataFrame): Input DataFrame.
+        exclude_columns (list): List of column names to exclude from conversion.
+
+    Returns:
+        pd.DataFrame: DataFrame with fields converted to strings.
+    """
+    exclude_columns = exclude_columns or []
+
+    def convert_nested(value):
+        """Recursively convert nested structures to strings."""
+        if isinstance(value, dict):
+            # Convert each key-value pair in the dictionary to strings
+            return {k: convert_nested(v) for k, v in value.items()}
+        elif isinstance(value, list):
+            # Convert each item in the list to a string
+            return [convert_nested(v) for v in value]
+        elif pd.isna(value):
+            # Handle NaN or None values
+            return ''
+        else:
+            # Convert primitive types to strings
+            return str(value)
+
+    for col in df.columns:
+        if col not in exclude_columns:
+            if df[col] == 'attributes' | df[col] == 'profile__attributes':  # Likely contains nested objects
+                df[col] = df[col].apply(lambda x: convert_nested(x))
+            else:
+                df[col] = df[col].astype(str)
+
+    return df
 # # Insert salesforce
 # def insert_salesforce(object_name, records, batch_size=500):
 #     """
