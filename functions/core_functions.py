@@ -39,7 +39,20 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 import fsspec
 import gc
+import numpy as np
+import dask.dataframe as dd  # Use Dask for parallel processing
+# from cudf import DataFrame as cudf  # Uncomment for GPU-accelerated processing with cuDF
+import cudf
+import dask
+import dask.dataframe as dd
 
+dask.config.set({"dataframe.backend": "cudf"})
+
+
+class DataFrameConfig:
+    def __init__(self, dataframe, config):
+        self.dataframe = dataframe
+        self.config = config
 
 def initialize_clients(file_path='/home/developer/keys/project-keys/colab-settings.yaml', service_account_secret_name='SA_ADHOC_BILLING'):
     """
@@ -428,13 +441,78 @@ def preprocess_df(
                     if key == 'length':
                         df['length_in_seconds'] = (
                             df[col]
-                            .apply(lambda x: core_functions.time_to_seconds(x.get(key)) if x else None)
+                            .apply(lambda x: time_to_seconds(x.get(key)) if x else None)
                             .fillna(0)
                             .astype(int)
                         )
                     df[col + '_' + key] = df[col].apply(lambda x: x.get(key) if x else None)
 
     return df
+
+def preprocess_dataframe(df_config):
+    """
+    Preprocess a DataFrame based on its configuration.
+
+    Args:
+        df_config (DataFrameConfig): Object containing the DataFrame and its preprocessing configuration.
+    
+    Returns:
+        pd.DataFrame: Preprocessed DataFrame.
+    """
+    df = df_config.dataframe.copy()
+    config = df_config.config
+
+    # Process date columns
+    if 'date_cols' in config:
+        for col in config['date_cols']:
+            df[col] = df[col].fillna('1971-01-01T00:00:00-00:00')
+            df[col] = pd.to_datetime(df[col], errors='coerce', utc=True)
+            if 'to_epoch_cols' in config and col in config['to_epoch_cols']:
+                df[col + '_epoch'] = df[col].apply(lambda x: int(x.timestamp()) if pd.notna(x) else 0)
+
+    # Process int columns
+    if 'int_cols' in config:
+        for col in config['int_cols']:
+            fill_value = 0 if col == 'clone_of' else -1
+            df[col] = df[col].fillna(fill_value).astype(int)
+            
+    # Process float columns
+    if 'float_cols' in config:
+        for col in config['float_cols']:
+            df[col] = df[col].fillna(-1.0).astype('float')
+
+    # Process boolean columns
+    if 'bool_cols' in config:
+        for col in config['bool_cols']:
+            df[col] = df[col].fillna(False).astype('bool')
+
+    # Process lowercase string columns
+    if 'lower_cols' in config:
+        for col in config['lower_cols']:
+            df[col] = df[col].str.lower()
+
+    # Process general string columns
+    if 'str_cols' in config:
+        for col in config['str_cols']:
+            df[col] = df[col].fillna('').astype('str')
+
+    # Process struct columns
+    if 'struct_cols' in config:
+        for col in config['struct_cols']:
+            if df[col].notna().any():
+                struct_keys = df[col].dropna().iloc[0].keys()
+                for key in struct_keys:
+                    if key == 'length':
+                        df['length_in_seconds'] = (
+                            df[col]
+                            .apply(lambda x: time_to_seconds(x.get(key)) if x else None)
+                            .fillna(0)
+                            .astype(int)
+                        )
+                    df[col + '_' + key] = df[col].apply(lambda x: x.get(key) if x else None)
+
+    return df
+
 
 def delete_all_dataframes():
     """
@@ -454,6 +532,240 @@ def delete_all_dataframes():
     # Trigger garbage collection
     gc.collect()
     print("Garbage collection completed. All DataFrame objects have been deleted.")
+    
+def clean_encodings_df(df):
+    df['attributes_description'] = df['attributes_description'].fillna('') if 'attributes_description' in df.columns else ''
+
+    # Define conditions
+    conditions = [
+        df['attributes_product_code'].notnull(),
+        df['attributes_product_code'].isnull() & df['attributes_product_name'].notnull(),
+        df['attributes_product_code'].isnull() & df['attributes_product_name'].isnull() & df['attributes_donovan_agency_product_code'].notnull(),
+        df['attributes_product_code'].isnull() & df['attributes_product_name'].isnull() & df['attributes_donovan_agency_product_code'].isnull() & df['attributes_description'].notnull() & df['attributes_description'].str.len() > 10 & ~df['attributes_description'].str.startswith(('TV', 'RA')),
+        df['attributes_product_code'].isnull() & df['attributes_product_name'].isnull() & df['attributes_donovan_agency_product_code'].isnull() & df['attributes_description'].notnull() & df['attributes_description'].str.len() > 10 & df['attributes_description'].str.startswith(('TV', 'RA'))
+    ]
+
+    # Define corresponding values
+    choices = [
+        df['attributes_product_code'],
+        df['attributes_product_name'],
+        df['attributes_donovan_agency_product_code'],
+        df['attributes_description'].str[26:30].str.strip(),
+        df['attributes_description'].str[6:10].str.strip()
+    ]
+
+    # Apply conditions and choices to create the new column
+    df['product_code'] = np.select(conditions, choices, default=None)
+
+
+
+    # Define conditions
+    conditions = [
+        df['attributes_isci'].notnull(),
+        df['attributes_isci'].isnull() & df['attributes_project_name'].notnull(),
+        df['attributes_isci'].isnull() & df['attributes_project_name'].isnull() & df['attributes_description'].notnull() & df['attributes_description'].str.len() > 10 & ~df['attributes_description'].str.startswith(('TV', 'RA')),
+        df['attributes_isci'].isnull() & df['attributes_project_name'].isnull() & df['attributes_description'].notnull() & df['attributes_description'].str.len() > 10 & df['attributes_description'].str.startswith(('TV', 'RA'))
+    ]
+
+    # Define corresponding values
+    choices = [
+        df['attributes_isci'],
+        df['attributes_project_name'],
+        df['attributes_description'].str[8:18].str.strip(),
+        df['attributes_description'].str[18:38].str.strip()
+    ]
+
+    # Apply conditions and choices to create the new column
+    df['isci'] = np.select(conditions, choices, default=None)
+
+
+    # Define conditions
+    conditions = [
+        df['attributes_advertiser'].notnull(),
+        df['attributes_advertiser'].isnull() & df['attributes_client_code'].notnull(),
+        df['attributes_advertiser'].isnull() & df['attributes_client_code'].isnull() & df['attributes_donovan_agency_advertiser_code'].notnull(),
+        df['attributes_advertiser'].isnull() & df['attributes_project_name'].isnull() & df['attributes_donovan_agency_advertiser_code'].isnull() & df['attributes_description'].notnull() & df['attributes_description'].str.len() > 10 & ~df['attributes_description'].str.startswith(('TV', 'RA')),
+        df['attributes_advertiser'].isnull() & df['attributes_project_name'].isnull() & df['attributes_donovan_agency_advertiser_code'].isnull() & df['attributes_description'].notnull() & df['attributes_description'].str.len() > 10 & df['attributes_description'].str.startswith(('TV', 'RA'))
+    ]
+
+    # Define corresponding values
+    choices = [
+        df['attributes_advertiser'],
+        df['attributes_client_code'],
+        df['attributes_donovan_agency_advertiser_code'],
+        df['attributes_description'].str[22:26].str.strip(),
+        df['attributes_description'].str[2:6].str.strip()
+    ]
+
+    # Apply conditions and choices to create the new column
+    df['advertiser'] = np.select(conditions, choices, default=None)
+    return df
+
+# def clean_encodings_df(df, config=None, use_dask=True):
+#     """
+#     Cleans the encodings DataFrame with configurable conditions.
+    
+#     Args:
+#         df (pd.DataFrame or dd.DataFrame): The DataFrame to clean.
+#         config (dict): A dictionary specifying the columns, conditions, and choices.
+#         use_dask (bool): Whether to use Dask for parallelized processing.
+    
+#     Returns:
+#         pd.DataFrame or dd.DataFrame: The cleaned DataFrame.
+#     """
+#     # Convert to Dask DataFrame if use_dask is True
+#     if use_dask:
+#         df = dd.from_pandas(df, npartitions=8)  # Adjust partitions based on available memory and cores
+    
+#     # Fill 'attributes_description' if it exists
+#     if 'attributes_description' in df.columns:
+#         df['attributes_description'] = df['attributes_description'].fillna('')
+
+#     # Default configuration if not provided
+#     if config is None:
+#         config = {
+#             'product_code': {
+#                 'conditions': [
+#                     df['attributes_product_code'].notnull(),
+#                     df['attributes_product_code'].isnull() & df['attributes_product_name'].notnull(),
+#                     df['attributes_product_code'].isnull() & df['attributes_product_name'].isnull() & df['attributes_donovan_agency_product_code'].notnull(),
+#                     df['attributes_product_code'].isnull() & df['attributes_product_name'].isnull() & df['attributes_donovan_agency_product_code'].isnull()
+#                     & df['attributes_description'].notnull() & (df['attributes_description'].str.len() > 10)
+#                     & ~df['attributes_description'].str.startswith(('TV', 'RA')),
+#                     df['attributes_product_code'].isnull() & df['attributes_product_name'].isnull() & df['attributes_donovan_agency_product_code'].isnull()
+#                     & df['attributes_description'].notnull() & (df['attributes_description'].str.len() > 10)
+#                     & df['attributes_description'].str.startswith(('TV', 'RA')),
+#                 ],
+#                 'choices': [
+#                     df['attributes_product_code'],
+#                     df['attributes_product_name'],
+#                     df['attributes_donovan_agency_product_code'],
+#                     df['attributes_description'].str[26:30].str.strip(),
+#                     df['attributes_description'].str[6:10].str.strip(),
+#                 ]
+#             },
+#             # Add other configurations here...
+#         }
+    
+#     # Apply each field's conditions and choices
+#     for column, params in config.items():
+#         conditions = params['conditions']
+#         choices = params['choices']
+
+#         # Combine conditions and choices into a Dask Series
+#         result = df[conditions[0]].astype(object)  # Initialize result
+#         for condition, choice in zip(conditions[1:], choices[1:]):
+#             result = result.where(~condition, choice)
+        
+#         # Assign the result back to the DataFrame
+#         df[column] = result
+    
+#     # Convert back to Pandas if Dask is used
+#     if use_dask:
+#         df = df.compute()
+    
+#     return df
+
+def clean_encodings_df_cudf(df, config=None):
+    """
+    Cleans the encodings DataFrame using cuDF for GPU acceleration.
+    
+    Args:
+        df (cudf.DataFrame): The cuDF DataFrame to clean.
+        config (dict): A dictionary specifying the columns, conditions, and choices.
+    
+    Returns:
+        cudf.DataFrame: The cleaned DataFrame.
+    """
+    # Fill 'attributes_description' if it exists
+    if 'attributes_description' in df.columns:
+        df['attributes_description'] = df['attributes_description'].fillna('')
+
+    # Default configuration if not provided
+    if config is None:
+        config = {
+            'product_code': {
+                'conditions': [
+                    df['attributes_product_code'].notnull(),
+                    df['attributes_product_code'].isnull() & df['attributes_product_name'].notnull(),
+                    df['attributes_product_code'].isnull() & df['attributes_product_name'].isnull() & df['attributes_donovan_agency_product_code'].notnull(),
+                    df['attributes_product_code'].isnull() & df['attributes_product_name'].isnull() & df['attributes_donovan_agency_product_code'].isnull()
+                    & df['attributes_description'].notnull() & (df['attributes_description'].str.len() > 10)
+                    & ~df['attributes_description'].str.contains(r'^TV|^RA'),
+                    df['attributes_product_code'].isnull() & df['attributes_product_name'].isnull() & df['attributes_donovan_agency_product_code'].isnull()
+                    & df['attributes_description'].notnull() & (df['attributes_description'].str.len() > 10)
+                    & df['attributes_description'].str.contains(r'^TV|^RA'),
+                ],
+                'choices': [
+                    df['attributes_product_code'],
+                    df['attributes_product_name'],
+                    df['attributes_donovan_agency_product_code'],
+                    df['attributes_description'].str.slice(26, 30).str.strip(),
+                    df['attributes_description'].str.slice(6, 10).str.strip(),
+                ]
+            },
+            'isci': {
+                'conditions': [
+                    df['attributes_isci'].notnull(),
+                    df['attributes_isci'].isnull() & df['attributes_project_name'].notnull(),
+                    df['attributes_isci'].isnull() & df['attributes_project_name'].isnull() & df['attributes_description'].notnull()
+                    & (df['attributes_description'].str.len() > 10) & ~df['attributes_description'].str.contains(r'^TV|^RA'),
+                    df['attributes_isci'].isnull() & df['attributes_project_name'].isnull() & df['attributes_description'].notnull()
+                    & (df['attributes_description'].str.len() > 10) & df['attributes_description'].str.contains(r'^TV|^RA'),
+                ],
+                'choices': [
+                    df['attributes_isci'],
+                    df['attributes_project_name'],
+                    df['attributes_description'].str.slice(8, 18).str.strip(),
+                    df['attributes_description'].str.slice(18, 38).str.strip(),
+                ]
+            },
+            'advertiser': {
+                'conditions': [
+                    df['attributes_advertiser'].notnull(),
+                    df['attributes_advertiser'].isnull() & df['attributes_client_code'].notnull(),
+                    df['attributes_advertiser'].isnull() & df['attributes_client_code'].isnull() & df['attributes_donovan_agency_advertiser_code'].notnull(),
+                    df['attributes_advertiser'].isnull() & df['attributes_project_name'].isnull() & df['attributes_donovan_agency_advertiser_code'].isnull()
+                    & df['attributes_description'].notnull() & (df['attributes_description'].str.len() > 10)
+                    & ~df['attributes_description'].str.contains(r'^TV|^RA'),
+                    df['attributes_advertiser'].isnull() & df['attributes_project_name'].isnull() & df['attributes_donovan_agency_advertiser_code'].isnull()
+                    & df['attributes_description'].notnull() & (df['attributes_description'].str.len() > 10)
+                    & df['attributes_description'].str.contains(r'^TV|^RA'),
+                ],
+                'choices': [
+                    df['attributes_advertiser'],
+                    df['attributes_client_code'],
+                    df['attributes_donovan_agency_advertiser_code'],
+                    df['attributes_description'].str.slice(22, 26).str.strip(),
+                    df['attributes_description'].str.slice(2, 6).str.strip(),
+                ]
+            }
+        }
+    
+    # Apply each field's conditions and choices
+    for column, params in config.items():
+        result = cudf.Series(None, index=df.index)  # Initialize with nulls
+        for condition, choice in zip(params['conditions'], params['choices']):
+            result = result.where(~condition, choice)
+        df[column] = result
+    
+    return df
+
+def clean_sfdc_df(df, id_col=None, name_col=None):
+
+    for col in df.columns:
+        new_col = col.replace('__c', '').lower()
+        df = df.rename(columns={col: new_col})
+        if new_col == 'id' and id_col:
+            df.rename(columns={new_col: id_col}, inplace=True)
+        if new_col == 'name' and name_col:
+            df.rename(columns={new_col: name_col}, inplace=True)
+        if new_col == 'account':
+            df.rename(columns={new_col: 'sfdc_account_id'}, inplace=True)
+        if new_col == 'related_rate_card':
+            df.rename(columns={new_col: 'sfdc_rate_card_id'}, inplace=True)
+         
+    return df
     
 # # Insert salesforce
 # def insert_salesforce(object_name, records, batch_size=500):
