@@ -116,7 +116,100 @@ def initialize_clients(file_path='/home/developer/keys/project-keys/colab-settin
     response = dict({"config": config, "clients": clients})
     return response
 
+
+
+def prep_columns_for_parquet(df, valid_final_cols, int_cols=None, date_cols=None, bool_cols=None, float_cols=None):
+    """
+    Prepare DataFrame columns for writing to Parquet by ensuring all columns are present and have the correct data types.
     
+    Args:
+        df (pd.DataFrame): The DataFrame to prepare.
+        valid_final_cols (list of str): List of valid final columns to include in the output.
+        int_cols (list of str): List of integer columns.
+        date_cols (list of str): List of date columns.
+        bool_cols (list of str): List of boolean columns.
+        float_cols (list of str): List of float columns.
+    
+    Returns:
+        pd.DataFrame: The prepared DataFrame.
+    """
+    # Ensure column lists are initialized
+    int_cols = int_cols or []
+    date_cols = date_cols or []
+    bool_cols = bool_cols or []
+    float_cols = float_cols or []
+    all_cols = int_cols + date_cols + bool_cols + float_cols
+
+    for col in df.columns:
+        try:
+            # Drop columns not in the valid final list
+            if col not in valid_final_cols:
+                print(f"Dropping column: {col}")
+                df.drop(columns=col, inplace=True)
+                continue
+
+            # Trim whitespace from strings
+            if df[col].dtype == 'object':
+                print(f"Trimming whitespace for column: {col}")
+                df[col] = df[col].str.strip()
+
+            # Process integer columns
+            if col in int_cols:
+                print(f"Processing integer column: {col}")
+                df[col] = df[col].replace(['', ' '], np.nan)  # Replace empty strings and spaces with NaN
+                df[col] = pd.to_numeric(df[col], errors='coerce')  # Convert invalid values to NaN
+                df[col] = df[col].fillna(-1).astype('Int64')  # Use nullable Int64 dtype
+
+            # Process date columns
+            elif col in date_cols:
+                print(f"Processing date column: {col}")
+                df[col] = pd.to_datetime(df[col], errors='coerce', utc=True)
+
+            # Process float columns
+            elif col in float_cols:
+                print(f"Processing float column: {col}")
+                df[col] = df[col].replace(['', ' '], np.nan)  # Replace empty strings and spaces with NaN
+                df[col] = pd.to_numeric(df[col], errors='coerce').fillna(-1.0).astype(float)
+
+            # Process boolean columns
+            elif col in bool_cols:
+                print(f"Processing boolean column: {col}")
+                df[col] = df[col].replace({1: True, 0: False, '1': True, '0': False, '': np.nan})
+                df[col] = df[col].fillna(False).astype(bool)
+
+            # Add missing columns with default values
+            if col in valid_final_cols and col not in df.columns:
+                print(f"Adding missing column: {col}")
+                df[col] = ''
+
+            # Ensure string columns are filled with empty strings
+            if col in valid_final_cols and col not in all_cols:
+                df[col] = df[col].fillna('').astype(str)
+
+        except Exception as e:
+            print(f"Error processing column '{col}': {e}")
+            raise  # Re-raise the error after logging it for debugging
+
+    # Print column types for debugging
+    for col in df.columns:
+        print(f"{col}: type: {df[col].dtype}")
+
+    return df
+
+# Enforce schema
+
+def enforce_schema(df, schema):
+    for column, dtype in schema.items():
+        if dtype == 'string':
+            df[column] = df[column].astype(str).fillna('')
+        elif dtype == 'int64':
+            df[column] = pd.to_numeric(df[column], errors='coerce').fillna(-1).astype('int64')
+        elif dtype == 'float64':
+            df[column] = pd.to_numeric(df[column], errors='coerce').fillna(-1.0).astype('float64')
+        elif dtype == 'datetime64[ns, UTC]':
+            df[column] = pd.to_datetime(df[column], errors='coerce', utc=True).fillna(pd.Timestamp.min.tz_localize('UTC'))
+    return df
+
 # Define a function to fetch data from BigQuery
 def fetch_gbq_data(query, bigquery_client):
     try:
@@ -263,41 +356,47 @@ def clean_record(record):
 def generate_uuid():
     return str(uuid.uuid4())
 
-def write_hive_partitioned_parquet(df, output_bucket, output_prefix, partition_cols, gcs_options, max_records_per_file=1_000_000):
+def write_hive_partitioned_parquet(
+    df, output_bucket, output_prefix, partition_cols, gcs_options, max_records_per_file=1_000_000
+):
     import math
     import uuid
     import pyarrow as pa
     import pyarrow.parquet as pq
     import fsspec
 
-    fs = fsspec.filesystem('gcs', **gcs_options)  # Initialize GCS filesystem
-    
+    # Debugging: Check passed GCS options
+    print("Initializing GCS filesystem with options:", gcs_options)
+
+    # Initialize GCS filesystem
+    fs = fsspec.filesystem('gcs', **gcs_options, skip_instance_cache=True)  # Disable caching for safety
+
     # Group by partitions
     grouped = df.groupby(partition_cols)
-    
+
     for keys, group in grouped:
         # Drop partition columns from the data
         group = group.drop(columns=partition_cols)
-        
+
         # Create subdirectory for this partition
         partition_subdir = "/".join([f"{col}={val}" for col, val in zip(partition_cols, keys)])
         partition_path = f"gcs://{output_bucket}/{output_prefix}/{partition_subdir}"
-        
+
         # Split into chunks if necessary
         num_chunks = math.ceil(len(group) / max_records_per_file)
-        
+
         for chunk_idx in range(num_chunks):
             chunk = group.iloc[chunk_idx * max_records_per_file : (chunk_idx + 1) * max_records_per_file]
-            
+
             # Generate a unique filename with UUID
             unique_filename = f"data-{uuid.uuid4().hex}.parquet"
             file_path = f"{partition_path}/{unique_filename}"
-            
+
             # Write Parquet file for this partition
             table = pa.Table.from_pandas(chunk, preserve_index=False)
             with fs.open(file_path, 'wb') as f:
                 pq.write_table(table, f, compression="snappy")
-            
+
             print(f"Written file: {file_path}")
             
 def convert_to_string_except_exclusions(df, exclude_columns=None):
