@@ -199,15 +199,53 @@ def prep_columns_for_parquet(df, valid_final_cols, int_cols=None, date_cols=None
 # Enforce schema
 
 def enforce_schema(df, schema):
+    """
+    Enforce a schema on a DataFrame, converting columns to specified types and filling missing values.
+
+    Args:
+        df (pd.DataFrame): The DataFrame to enforce the schema on.
+        schema (dict): A dictionary where keys are column names and values are expected data types.
+
+    Returns:
+        pd.DataFrame: The DataFrame with enforced schema.
+
+    Raises:
+        Exception: If an error occurs during processing of a column, the column name and error message are displayed.
+    """
     for column, dtype in schema.items():
-        if dtype == 'string':
-            df[column] = df[column].astype(str).fillna('')
-        elif dtype == 'int64':
-            df[column] = pd.to_numeric(df[column], errors='coerce').fillna(-1).astype('int64')
-        elif dtype == 'float64':
-            df[column] = pd.to_numeric(df[column], errors='coerce').fillna(-1.0).astype('float64')
-        elif dtype == 'datetime64[ns, UTC]':
-            df[column] = pd.to_datetime(df[column], errors='coerce', utc=True).fillna(pd.Timestamp.min.tz_localize('UTC'))
+        try:
+            if column not in df.columns:
+                print(f"Column '{column}' is missing. Adding as default.")
+                if dtype == 'string':
+                    df[column] = ''
+                elif dtype in ['int64', 'float64']:
+                    df[column] = -1
+                elif dtype == 'bool':
+                    df[column] = False
+                elif dtype == 'datetime64[ns, UTC]':
+                    df[column] = pd.NaT
+                else:
+                    df[column] = None
+                continue
+
+            # Enforce specific column types
+            if dtype == 'string':
+                df[column] = df[column].astype(str).fillna('')
+            elif dtype == 'int64':
+                df[column] = pd.to_numeric(df[column], errors='coerce').fillna(-1).astype('int64')
+            elif dtype == 'float64':
+                df[column] = pd.to_numeric(df[column], errors='coerce').fillna(-1.0).astype('float64')
+            elif dtype == 'bool':
+                df[column] = df[column].fillna(False).astype(bool)  # Handle NaN explicitly before conversion
+            elif dtype == 'datetime64[ns, UTC]':
+                # Gracefully handle invalid datetime values
+                df[column] = pd.to_datetime(df[column], errors='coerce', utc=True)
+                df[column].fillna(pd.Timestamp.min.tz_localize('UTC'), inplace=True)
+            else:
+                raise ValueError(f"Unsupported dtype '{dtype}' for column '{column}'")
+        except Exception as e:
+            print(f"Error processing column '{column}': {e}")
+            raise  # Re-raise the exception after logging
     return df
 
 # Define a function to fetch data from BigQuery
