@@ -366,7 +366,7 @@ def write_hive_partitioned_parquet(
     import fsspec
 
     # Debugging: Check passed GCS options
-    print("Initializing GCS filesystem with options:", gcs_options)
+    # print("Initializing GCS filesystem with options:", gcs_options)
 
     # Initialize GCS filesystem
     fs = fsspec.filesystem('gcs', **gcs_options, skip_instance_cache=True)  # Disable caching for safety
