@@ -738,6 +738,31 @@ def clean_encodings_df(df):
     df['advertiser'] = np.select(conditions, choices, default=None)
     return df
 
+def extract_year_month_day(df, date_column):
+    """
+    Extracts year, month, and day from a datetime column in a pandas DataFrame.
+
+    Parameters:
+    - df: pandas DataFrame containing the date column.
+    - date_column: string, name of the date column.
+
+    Returns:
+    - df: pandas DataFrame with new columns 'year', 'month', and 'day' added.
+    """
+    # Ensure the date_column is of datetime type
+    df[date_column] = pd.to_datetime(df[date_column], errors='coerce')
+    
+    # Check for NaT values (failed conversions)
+    if df[date_column].isnull().any():
+        print("Warning: Some dates could not be converted and are set as NaT.")
+    
+    # Extract year, month, and day
+    df['year'] = df[date_column].dt.year
+    df['month'] = df[date_column].dt.month
+    df['day'] = df[date_column].dt.day
+    
+    return df
+
 # def clean_encodings_df(df, config=None, use_dask=True):
 #     """
 #     Cleans the encodings DataFrame with configurable conditions.
