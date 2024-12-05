@@ -116,7 +116,19 @@ def initialize_clients(file_path='/home/developer/keys/project-keys/colab-settin
     response = dict({"config": config, "clients": clients})
     return response
 
-
+def fix_df_dtypes(df):
+    for col in df.columns:
+        if 'stamp' in col.lower() or 'date' in col.lower() or '_updated' in col.lower():
+            df[col] = pd.to_datetime(df[col], errors='coerce', utc=True).dt.floor('s')         
+        if df[col].dtype == 'object':
+            df[col] = df[col].astype(str)
+        elif df[col].dtype == 'int64':
+            df[col] = df[col].astype('Int64')
+        elif df[col].dtype == 'bool':
+            df[col] = df[col].astype('boolean')
+        elif df[col].dtype == 'datetime64[ns]':
+            df[col] = df[col].astype('datetime64[ns]').dt.floor('s')
+    return df
 
 def prep_columns_for_parquet(df, valid_final_cols, int_cols=None, date_cols=None, bool_cols=None, float_cols=None):
     """
@@ -603,7 +615,7 @@ def preprocess_dataframe(df_config):
     if 'date_cols' in config:
         for col in config['date_cols']:
             df[col] = df[col].fillna('1971-01-01T00:00:00-00:00')
-            df[col] = pd.to_datetime(df[col], errors='coerce', utc=True)
+            df[col] = pd.to_datetime(df[col], errors='coerce', utc=True).dt.floor('s')
             if 'to_epoch_cols' in config and col in config['to_epoch_cols']:
                 df[col + '_epoch'] = df[col].apply(lambda x: int(x.timestamp()) if pd.notna(x) else 0)
 
@@ -611,17 +623,17 @@ def preprocess_dataframe(df_config):
     if 'int_cols' in config:
         for col in config['int_cols']:
             fill_value = 0 if col == 'clone_of' else -1
-            df[col] = df[col].fillna(fill_value).astype(int)
+            df[col] = df[col].fillna(fill_value).astype('Int64')
             
     # Process float columns
     if 'float_cols' in config:
         for col in config['float_cols']:
-            df[col] = df[col].fillna(-1.0).astype('float')
+            df[col] = df[col].fillna(-1.0).astype('Float64')
 
     # Process boolean columns
     if 'bool_cols' in config:
         for col in config['bool_cols']:
-            df[col] = df[col].fillna(False).astype('bool')
+            df[col] = df[col].fillna(False).astype('boolean')
 
     # Process lowercase string columns
     if 'lower_cols' in config:

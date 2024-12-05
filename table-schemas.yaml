@@ -1,0 +1,310 @@
+encodings_parquet_schema:
+  - name: encoding_id
+    type: int64
+    null_fill_value: 0
+  - name: format_id
+    type: int64
+    null_fill_value: 0
+  - name: encoder_group_id
+    type: int64
+    null_fill_value: 0
+  - name: encoded_timestamp
+    type: string
+    null_fill_value: 1970-01-01T00:00:00
+  - name: attributes
+    type: string
+    null_fill_value: 
+  - name: clone_of
+    type: string
+    null_fill_value: 
+  - name: status
+    type: string
+    null_fill_value: 
+  - name: last_updated
+    type: string
+    null_fill_value: 1970-01-01T00:00:00
+  - name: last_audit_id
+    type: string
+    null_fill_value: 
+  - name: encoder_id
+    type: int64
+    null_fill_value: 0
+  - name: detection_end_date
+    type: string
+    null_fill_value: 1970-01-01T00:00:00
+  - name: attributes_advertiser
+    type: string
+    null_fill_value: 
+  - name: attributes_audience
+    type: string
+    null_fill_value: 
+  - name: attributes_audience_2
+    type: string
+    null_fill_value: 
+  - name: attributes_cable_estimate
+    type: string
+    null_fill_value: 
+  - name: attributes_campaign
+    type: string
+    null_fill_value: 
+  - name: attributes_category
+    type: string
+    null_fill_value: 
+  - name: attributes_client_code
+    type: string
+    null_fill_value: 
+  - name: attributes_commercial_id
+    type: string
+    null_fill_value: 
+  - name: attributes_contour_id
+    type: string
+    null_fill_value: 
+  - name: attributes_creative_offer
+    type: string
+    null_fill_value: 
+  - name: attributes_description
+    type: string
+    null_fill_value: 
+  - name: attributes_donovan_agency_advertiser_code
+    type: string
+    null_fill_value: 
+  - name: attributes_donovan_agency_estimate_code
+    type: string
+    null_fill_value: 
+  - name: attributes_donovan_agency_product_code
+    type: string
+    null_fill_value: 
+  - name: attributes_eid
+    type: string
+    null_fill_value: 
+  - name: attributes_group
+    type: string
+    null_fill_value: 
+  - name: attributes_hd_sd
+    type: string
+    null_fill_value: 
+  - name: attributes_id
+    type: string
+    null_fill_value: 
+  - name: attributes_isci
+    type: string
+    null_fill_value: 
+  - name: length_in_seconds
+    type: int64
+    null_fill_value: 0
+  - name: attributes_length
+    type: string
+    null_fill_value: 
+  - name: attributes_lob
+    type: string
+    null_fill_value: 
+  - name: attributes_media_type
+    type: string
+    null_fill_value: 
+  - name: attributes_message
+    type: string
+    null_fill_value: 
+  - name: attributes_misc
+    type: string
+    null_fill_value: 
+  - name: attributes_module_code
+    type: string
+    null_fill_value: 
+  - name: attributes_offer
+    type: string
+    null_fill_value: 
+  - name: attributes_offer_2
+    type: string
+    null_fill_value: 
+  - name: attributes_phone_number
+    type: string
+    null_fill_value: 
+  - name: attributes_product_code
+    type: string
+    null_fill_value: 
+  - name: attributes_product_name
+    type: string
+    null_fill_value: 
+  - name: attributes_project_name
+    type: string
+    null_fill_value: 
+  - name: attributes_quality
+    type: string
+    null_fill_value: 
+  - name: attributes_revision
+    type: string
+    null_fill_value: 
+  - name: attributes_show_name
+    type: string
+    null_fill_value: 
+  - name: attributes_slug
+    type: string
+    null_fill_value: 
+  - name: attributes_sport_id
+    type: string
+    null_fill_value: 
+  - name: attributes_sport_show_sub_category
+    type: string
+    null_fill_value: 
+  - name: attributes_spot_estimate
+    type: string
+    null_fill_value: 
+  - name: attributes_spot_name
+    type: string
+    null_fill_value: 
+  - name: attributes_tag
+    type: string
+    null_fill_value: 
+  - name: attributes_text
+    type: string
+    null_fill_value: 
+  - name: attributes_title
+    type: string
+    null_fill_value: 
+  - name: attributes_veil_id
+    type: string
+    null_fill_value: 
+  - name: attributes_version_name
+    type: string
+    null_fill_value: 
+  - name: attributes_year
+    type: string
+    null_fill_value: 
+  - name: description
+    type: string
+    null_fill_value: 
+  - name: product_code
+    type: string
+    null_fill_value: 
+  - name: product_name
+    type: string
+    null_fill_value: 
+  - name: donovan_agency_product_code
+    type: string
+    null_fill_value: 
+  - name: isci
+    type: string
+    null_fill_value: 
+  - name: project_name
+    type: string
+    null_fill_value: 
+  - name: advertiser
+    type: string
+    null_fill_value: 
+  - name: client_code
+    type: string
+    null_fill_value: 
+  - name: donovan_agency_advertiser_code
+    type: string
+    null_fill_value: 
+  - name: encoder_group_name
+    type: string
+    null_fill_value: 
+  - name: encoder_group__deleted
+    type: bool
+    null_fill_value: False
+  - name: encoder_group__last_audit_id
+    type: string
+    null_fill_value: 
+  - name: encoder_group__last_updated
+    type: string
+    null_fill_value: 1970-01-01T00:00:00
+  - name: aeis_id
+    type: int64
+    null_fill_value: 0
+  - name: aeis__encoding_id
+    type: int64
+    null_fill_value: 0
+  - name: aeis__encoding_offset
+    type: int64
+    null_fill_value: 0
+  - name: aeis__last_updated
+    type: string
+    null_fill_value: 1970-01-01T00:00:00
+  - name: aeis__last_audit_id
+    type: string
+    null_fill_value: 
+  - name: format_name
+    type: string
+    null_fill_value: 
+  - name: format__profile_id
+    type: int64
+    null_fill_value: 0
+  - name: format__customer_id
+    type: int64
+    null_fill_value: 0
+  - name: format__report_breakup
+    type: int64
+    null_fill_value: 0
+  - name: format__deleted
+    type: bool
+    null_fill_value: False
+  - name: format__last_updated
+    type: string
+    null_fill_value: 1970-01-01T00:00:00
+  - name: format__last_audit_id
+    type: string
+    null_fill_value: 
+  - name: sfdc_account_id
+    type: string
+    null_fill_value: 
+  - name: sfdc_account_name
+    type: string
+    null_fill_value: 
+  - name: customer_id
+    type: double
+    null_fill_value: 0.0
+  - name: account_id
+    type: int64
+    null_fill_value: 0
+  - name: contract_item
+    type: int64
+    null_fill_value: 0
+  - name: customer_name
+    type: string
+    null_fill_value: 
+  - name: contract_number
+    type: int64
+    null_fill_value: 0
+  - name: sales_person_code
+    type: string
+    null_fill_value: 
+  - name: deleted
+    type: bool
+    null_fill_value: False
+  - name: profile_id
+    type: int64
+    null_fill_value: 0
+  - name: profile_name
+    type: string
+    null_fill_value: 
+  - name: profile__deleted
+    type: bool
+    null_fill_value: False
+  - name: profile__default_asset_code
+    type: string
+    null_fill_value: 
+  - name: profile__last_updated
+    type: string
+    null_fill_value: 1970-01-01T00:00:00
+  - name: profile__last_audit_id
+    type: string
+    null_fill_value: 
+  - name: profile__attributes
+    type: string
+    null_fill_value: 
+  - name: ad_prod_campaign
+    type: string
+    null_fill_value: 
+  - name: campaign
+    type: string
+    null_fill_value: 
+  - name: sfdc_advertiser_id
+    type: string
+    null_fill_value: 
+  - name: billing_last_updated
+    type: string
+    null_fill_value: 1970-01-01T00:00:00
+  - name: billing_last_audit_id
+    type: string
+    null_fill_value: 
