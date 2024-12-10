@@ -407,7 +407,7 @@ def generate_uuid():
     return str(uuid.uuid4())
 
 def write_hive_partitioned_parquet(
-    df, output_bucket, output_prefix, partition_cols, gcs_options, max_records_per_file=1_000_000
+    df, output_bucket, output_prefix, partition_cols, gcs_options, max_records_per_file=1_000_000, spec='gcs'
 ):
     import math
     import uuid
@@ -419,7 +419,7 @@ def write_hive_partitioned_parquet(
     # print("Initializing GCS filesystem with options:", gcs_options)
 
     # Initialize GCS filesystem
-    fs = fsspec.filesystem('gcs', **gcs_options, skip_instance_cache=True)  # Disable caching for safety
+    fs = fsspec.filesystem(spec, **gcs_options, skip_instance_cache=True)  # Disable caching for safety
 
     # Group by partitions
     grouped = df.groupby(partition_cols)
@@ -430,7 +430,10 @@ def write_hive_partitioned_parquet(
 
         # Create subdirectory for this partition
         partition_subdir = "/".join([f"{col}={val}" for col, val in zip(partition_cols, keys)])
-        partition_path = f"gcs://{output_bucket}/{output_prefix}/{partition_subdir}"
+        if spec == 'gcs':
+            partition_path = f"gcs://{output_bucket}/{output_prefix}/{partition_subdir}"
+        elif spec == 's3':
+            partition_path = f"s3://{output_bucket}/{output_prefix}/{partition_subdir}"
 
         # Split into chunks if necessary
         num_chunks = math.ceil(len(group) / max_records_per_file)

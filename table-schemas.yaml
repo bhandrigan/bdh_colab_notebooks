@@ -1,3 +1,236 @@
+encodings_python_schema:
+  - name: encoding_id
+    type: Int64
+  - name: format_id
+    type: Int64
+  - name: encoder_group_id
+    type: Int64
+  - name: encoded_timestamp
+    type: string
+  - name: attributes
+    type: string
+  - name: clone_of
+    type: Int64
+  - name: status
+    type: string
+  - name: last_updated
+    type: string
+  - name: last_audit_id
+    type: string
+  - name: encoder_id
+    type: Int64
+  - name: detection_end_date
+    type: string
+  - name: attributes_advertiser
+    type: string
+  - name: attributes_audience
+    type: string
+  - name: attributes_audience_2
+    type: string
+  - name: attributes_cable_estimate
+    type: string
+  - name: attributes_campaign
+    type: string
+  - name: attributes_category
+    type: string
+  - name: attributes_client_code
+    type: string
+  - name: attributes_commercial_id
+    type: string
+  - name: attributes_contour_id
+    type: string
+  - name: attributes_creative_offer
+    type: string
+  - name: attributes_description
+    type: string
+  - name: attributes_donovan_agency_advertiser_code
+    type: string
+  - name: attributes_donovan_agency_estimate_code
+    type: string
+  - name: attributes_donovan_agency_product_code
+    type: string
+  - name: attributes_eid
+    type: string
+  - name: attributes_group
+    type: string
+  - name: attributes_hd_sd
+    type: string
+  - name: attributes_id
+    type: string
+  - name: attributes_isci
+    type: string
+  - name: length_in_seconds
+    type: Int64
+  - name: attributes_length
+    type: string
+  - name: attributes_lob
+    type: string
+  - name: attributes_media_type
+    type: string
+  - name: attributes_message
+    type: string
+  - name: attributes_misc
+    type: string
+  - name: attributes_module_code
+    type: string
+  - name: attributes_offer
+    type: string
+  - name: attributes_offer_2
+    type: string
+  - name: attributes_phone_number
+    type: string
+  - name: attributes_product_code
+    type: string
+  - name: attributes_product_name
+    type: string
+  - name: attributes_project_name
+    type: string
+  - name: attributes_quality
+    type: string
+  - name: attributes_revision
+    type: string
+  - name: attributes_show_name
+    type: string
+  - name: attributes_slug
+    type: string
+  - name: attributes_sport_id
+    type: string
+  - name: attributes_sport_show_sub_category
+    type: string
+  - name: attributes_spot_estimate
+    type: string
+  - name: attributes_spot_name
+    type: string
+  - name: attributes_tag
+    type: string
+  - name: attributes_text
+    type: string
+  - name: attributes_title
+    type: string
+  - name: attributes_veil_id
+    type: string
+  - name: attributes_version_name
+    type: string
+  - name: attributes_year
+    type: string
+  - name: description
+    type: string
+  - name: product_code
+    type: string
+  - name: product_name
+    type: string
+  - name: donovan_agency_product_code
+    type: string
+  - name: isci
+    type: string
+  - name: project_name
+    type: string
+  - name: advertiser
+    type: string
+  - name: client_code
+    type: string
+  - name: donovan_agency_advertiser_code
+    type: string
+  - name: encoder_group_name
+    type: string
+  - name: encoder_group__deleted
+    type: boolean
+  - name: encoder_group__last_audit_id
+    type: string
+  - name: encoder_group__last_updated
+    type: string
+  - name: aeis_id
+    type: Int64
+  - name: aeis__encoding_id
+    type: Int64
+  - name: aeis__encoding_offset
+    type: Int64
+  - name: aeis__last_updated
+    type: string
+  - name: aeis__last_audit_id
+    type: string
+  - name: format_name
+    type: string
+  - name: format__profile_id
+    type: Int64
+  - name: format__customer_id
+    type: Int64
+  - name: format__report_breakup
+    type: Int64
+  - name: format__deleted
+    type: boolean
+  - name: format__last_updated
+    type: string
+  - name: format__last_audit_id
+    type: string
+  - name: sfdc_account_id
+    type: string
+  - name: sfdc_account_name
+    type: string
+  - name: customer_id
+    type: Int64
+  - name: account_id
+    type: Int64
+  - name: contract_item
+    type: Int64
+  - name: customer_name
+    type: string
+  - name: contract_number
+    type: Int64
+  - name: sales_person_code
+    type: string
+  - name: deleted
+    type: boolean
+  - name: profile_id
+    type: Int64
+  - name: profile_name
+    type: string
+  - name: profile__deleted
+    type: boolean
+  - name: profile__default_asset_code
+    type: string
+  - name: profile__last_updated
+    type: string
+  - name: profile__last_audit_id
+    type: string
+  - name: profile__attributes
+    type: string
+  - name: ad_prod_campaign
+    type: string
+  - name: campaign
+    type: string
+  - name: sfdc_advertiser_id
+    type: string
+  - name: billing_last_updated
+    type: string
+  - name: billing_last_audit_id
+    type: string
+  - name: segments_date
+    type: string
+  - name: segments_day_of_week
+    type: string
+  - name: segments_media
+    type: string
+  - name: segments_month_label
+    type: string
+  - name: segments_quarter_label
+    type: string
+  - name: segments_week_label
+    type: string
+  - name: segments_month
+    type: string
+  - name: segments_quarter
+    type: string
+  - name: segments_week
+    type: string
+  - name: segments_year
+    type: string
+  - name: year
+    type: Int64
+  - name: month
+    type: Int64
+  - name: day
+    type: Int64
 encodings_parquet_schema:
   - name: encoding_id
     type: int64
@@ -10,19 +243,16 @@ encodings_parquet_schema:
     null_fill_value: 0
   - name: encoded_timestamp
     type: string
-    null_fill_value: 1970-01-01T00:00:00
-  - name: attributes
-    type: string
     null_fill_value: 
   - name: clone_of
-    type: string
-    null_fill_value: 
+    type: int64
+    null_fill_value: 0
   - name: status
     type: string
     null_fill_value: 
   - name: last_updated
     type: string
-    null_fill_value: 1970-01-01T00:00:00
+    null_fill_value: 
   - name: last_audit_id
     type: string
     null_fill_value: 
@@ -31,7 +261,7 @@ encodings_parquet_schema:
     null_fill_value: 0
   - name: detection_end_date
     type: string
-    null_fill_value: 1970-01-01T00:00:00
+    null_fill_value: 
   - name: attributes_advertiser
     type: string
     null_fill_value: 
@@ -208,7 +438,7 @@ encodings_parquet_schema:
     null_fill_value: 
   - name: encoder_group__last_updated
     type: string
-    null_fill_value: 1970-01-01T00:00:00
+    null_fill_value: 
   - name: aeis_id
     type: int64
     null_fill_value: 0
@@ -220,7 +450,7 @@ encodings_parquet_schema:
     null_fill_value: 0
   - name: aeis__last_updated
     type: string
-    null_fill_value: 1970-01-01T00:00:00
+    null_fill_value: 
   - name: aeis__last_audit_id
     type: string
     null_fill_value: 
@@ -241,7 +471,7 @@ encodings_parquet_schema:
     null_fill_value: False
   - name: format__last_updated
     type: string
-    null_fill_value: 1970-01-01T00:00:00
+    null_fill_value: 
   - name: format__last_audit_id
     type: string
     null_fill_value: 
@@ -252,8 +482,8 @@ encodings_parquet_schema:
     type: string
     null_fill_value: 
   - name: customer_id
-    type: double
-    null_fill_value: 0.0
+    type: int64
+    null_fill_value: 0
   - name: account_id
     type: int64
     null_fill_value: 0
@@ -286,7 +516,7 @@ encodings_parquet_schema:
     null_fill_value: 
   - name: profile__last_updated
     type: string
-    null_fill_value: 1970-01-01T00:00:00
+    null_fill_value: 
   - name: profile__last_audit_id
     type: string
     null_fill_value: 
@@ -304,7 +534,48 @@ encodings_parquet_schema:
     null_fill_value: 
   - name: billing_last_updated
     type: string
-    null_fill_value: 1970-01-01T00:00:00
+    null_fill_value: 
   - name: billing_last_audit_id
     type: string
     null_fill_value: 
+  - name: segments_date
+    type: string
+    null_fill_value: 
+  - name: segments_day_of_week
+    type: string
+    null_fill_value: 
+  - name: segments_media
+    type: string
+    null_fill_value: 
+  - name: segments_month_label
+    type: string
+    null_fill_value: 
+  - name: segments_quarter_label
+    type: string
+    null_fill_value: 
+  - name: segments_week_label
+    type: string
+    null_fill_value: 
+  - name: segments_month
+    type: string
+    null_fill_value: 
+  - name: segments_quarter
+    type: string
+    null_fill_value: 
+  - name: segments_week
+    type: string
+    null_fill_value: 
+  - name: segments_year
+    type: string
+    null_fill_value: 
+  - name: year
+    type: int64
+    null_fill_value: 0
+  - name: month
+    type: int64
+    null_fill_value: 0
+  - name: day
+    type: int64
+    null_fill_value: 0
+
+

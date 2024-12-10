@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<configuration>
+  <property>
+    <name>hive.metastore.uris</name>
+    <value>thrift://10.11.0.10:9083</value>
+    <description>URI of the Hive Metastore server.</description>
+  </property>
+  <!-- Add other necessary properties here -->
+</configuration>

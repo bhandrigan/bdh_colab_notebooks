@@ -1,2 +1,3 @@
 .env
 functions/__pycache__/*
+metastore_db/*
