@@ -45,6 +45,9 @@ import dask.dataframe as dd  # Use Dask for parallel processing
 import cudf
 import dask
 import dask.dataframe as dd
+import ast
+from minio import Minio
+from minio.error import S3Error
 
 dask.config.set({"dataframe.backend": "cudf"})
 
@@ -452,6 +455,89 @@ def write_hive_partitioned_parquet(
 
             print(f"Written file: {file_path}")
             
+# 
+def write_hive_partitioned_parquet_s4(
+    df, output_bucket, output_prefix, partition_cols, storage_options, max_records_per_file=1_000_000, spec='gcs'
+):
+    import math
+    import uuid
+    import pyarrow as pa
+    import pyarrow.parquet as pq
+    import fsspec
+
+    # Debugging: Check passed GCS options
+    # print("Initializing GCS filesystem with options:", gcs_options)
+    
+    
+    key = storage_options.get('key')
+    secret = storage_options.get('secret')
+    endpoint = storage_options.get('client_kwargs').get('endpoint_url')
+    endpoint_clean = endpoint.replace('https://', '').replace('http://', '')
+    s4_bucket = output_bucket
+    s4_output_prefix = output_prefix
+
+    if 'https://' in endpoint:
+        use_secure = True
+    else:
+        use_secure = False
+
+    # # Initialize GCS filesystem
+    # fs = fsspec.filesystem(spec, **gcs_options, skip_instance_cache=True)  # Disable caching for safety
+    s4_client = Minio(endpoint_clean, access_key=key, secret_key=secret, secure=use_secure)
+
+    found = s4_client.bucket_exists(s4_bucket)
+    if found:
+        print(f"Bucket {s4_bucket} already exists")
+    else:
+        s4_client.make_bucket(s4_bucket)
+        print(f"Created bucket {s4_bucket}")
+        
+    # Group by partitions
+    grouped = df.groupby(partition_cols)
+
+    for keys, group in grouped:
+        # Drop partition columns from the data
+        group = group.drop(columns=partition_cols)
+
+        # Create subdirectory for this partition
+        partition_subdir = "/".join([f"{col}={val}" for col, val in zip(partition_cols, keys)])
+        # if spec == 'gcs':
+        #     partition_path = f"gcs://{output_bucket}/{output_prefix}/{partition_subdir}"
+        # elif spec == 's3':
+        #     partition_path = f"s3://{output_bucket}/{output_prefix}/{partition_subdir}"
+        partition_path = f"{s4_output_prefix}/{partition_subdir}"
+
+        # Split into chunks if necessary
+        num_chunks = math.ceil(len(group) / max_records_per_file)
+
+        for chunk_idx in range(num_chunks):
+            chunk = group.iloc[chunk_idx * max_records_per_file : (chunk_idx + 1) * max_records_per_file]
+
+            # Generate a unique filename with UUID
+            unique_filename = f"data-{uuid.uuid4().hex}.parquet"
+            file_path = f"{partition_path}/{unique_filename}"
+
+            # Write Parquet file for this partition
+            table = pa.Table.from_pandas(chunk, preserve_index=False)
+            
+            s4_file = f'{file_path}'
+            temp_file = f'/tmp/{unique_filename}'
+            # write temp file to local
+            with open(temp_file, 'wb') as f:
+                pq.write_table(table, f, compression="snappy")
+            
+            s4_client.fput_object(s4_bucket, s4_file, temp_file)
+            print(f"Written file: {file_path}")
+            # delete temp file
+            os.remove(temp_file)
+            print(f"Deleted temp file: {temp_file}")
+
+            print(f"Written file: {file_path}")
+
+
+
+# 
+            
 def convert_to_string_except_exclusions(df, exclude_columns=None):
     """
     Convert all fields in the DataFrame to strings, including nested fields, except specified columns.
@@ -489,6 +575,44 @@ def convert_to_string_except_exclusions(df, exclude_columns=None):
 
     return df
 
+
+
+def pre_prep_dataframe(df):
+    # Step 1: Rename columns outside the loop
+    rename_dict = {col: col.lower().replace(' ', '_') for col in df.columns}
+    df = df.rename(columns=rename_dict)
+
+    # Step 2: Process the 'attributes' column if it exists
+    if 'attributes' in df.columns:
+        # Check if 'attributes' are JSON strings or dictionaries
+        sample_value = df['attributes'].dropna().iloc[0]
+        if isinstance(sample_value, str):
+            # Parse JSON strings
+            df['attributes'] = df['attributes'].apply(lambda x: ast.literal_eval(x) if x else None)
+        elif isinstance(sample_value, dict):
+            # Already dictionaries, no need to parse
+            pass
+        else:
+            # Handle other types if necessary
+            pass
+
+        # Get keys from the first non-null 'attributes' value
+        struct_keys = df['attributes'].dropna().iloc[0].keys()
+
+        for key in struct_keys:
+            if key == 'length':
+                df['length_in_seconds'] = (
+                    df['attributes']
+                    .apply(lambda x: time_to_seconds(x.get(key)) if x else None)
+                    .fillna(0)
+                    .astype('Int64')
+                )
+            # Create new columns for each key
+            df['attributes_' + key] = df['attributes'].apply(lambda x: x.get(key) if x else None)
+
+    # Step 3: Return the modified DataFrame
+    return df
+
 def fetch_table_data(project_id, dataset_id, table_names, bigquery_client):
     """
     Fetch data from BigQuery tables and return a dictionary of DataFrames.
@@ -509,6 +633,31 @@ def fetch_table_data(project_id, dataset_id, table_names, bigquery_client):
         """
         dataframes[table] = fetch_gbq_data(fetch_sql, bigquery_client)
     return dataframes
+
+def process_encodings_segments(df, media='TV'):
+    df['segments_date'] = pd.to_datetime(df['encoded_timestamp'])
+    df['segments_day_of_week'] = pd.to_datetime(df['encoded_timestamp']).dt.day_name().astype('string')
+    df['segments_media'] = df['attributes_media_type'].astype('string')
+    df.loc[df['segments_media'] == 'None', 'segments_media'] = media
+        
+    df['segments_month_label'] = pd.to_datetime(df['encoded_timestamp']).dt.to_period('M').astype('string')
+    df['segments_quarter_label'] = pd.to_datetime(df['encoded_timestamp']).dt.to_period('Q').astype('string')
+    df['segments_week_label'] = pd.to_datetime(df['encoded_timestamp']).dt.to_period('W').astype('string')
+
+    # Convert timestamp to periods and then use start_time to get the first day of the period
+    df['segments_month'] = pd.to_datetime(df['encoded_timestamp']).dt.to_period('M').dt.start_time.dt.date.astype('string')
+    df['segments_quarter'] = pd.to_datetime(df['encoded_timestamp']).dt.to_period('Q').dt.start_time.dt.date.astype('string')
+    df['segments_week'] = pd.to_datetime(df['encoded_timestamp']).dt.to_period('W').dt.start_time.dt.date.astype('string')
+
+    # Year can remain as a period or also be converted similarly if needed
+    df['segments_year'] = pd.to_datetime(df['encoded_timestamp']).dt.to_period('Y').astype('string')
+    df['year'] = df['segments_date'].dt.year.astype('Int64')
+    df['month'] = df['segments_date'].dt.month.astype('Int64')
+    df['day'] = df['segments_date'].dt.day.astype('Int64')
+    df['segments_date'] = df['segments_date'].dt.date.astype('string')
+    
+
+    return df
 
 def time_to_seconds(time_str):
     """
@@ -600,6 +749,172 @@ def preprocess_df(
                     df[col + '_' + key] = df[col].apply(lambda x: x.get(key) if x else None)
 
     return df
+
+def assign_segment_group(format_id):
+    segment_size = 1000
+    if format_id <= 1000:
+        segment_group = 1
+    else:
+        segment_group = ((format_id - 1) // segment_size) + 1
+    return segment_group
+
+def print_dataframe_python_schema(df, name):
+    print(f"{name}_python_schema")
+    for col in df.columns:
+        print(f'  - name: {col}')
+        print(f'    type: {df[col].dtype}')
+
+def print_dataframe_parquet_schema(df, name):
+    import pyarrow as pa
+
+    # Map pandas dtypes to PyArrow types with second precision for timestamps
+    pandas_to_pyarrow_types = {
+        'Int64': 'int64',
+        'int64': 'int64',
+        'int32': 'int32',
+        'Float64': 'double',
+        'float64': 'double',
+        'boolean': 'bool',
+        'bool': 'bool',
+        'datetime64[ns]': 'timestamp[s]',  # Changed to second precision
+        'object': 'string',
+        'category': 'dictionary'
+    }
+
+    print(f'{name}_parquet_schema:')
+
+    for col in df.columns:
+        pandas_dtype = str(df[col].dtype)
+        pyarrow_type = pandas_to_pyarrow_types.get(pandas_dtype, 'string')
+
+        # Determine a suitable null fill value
+        if pandas_dtype.startswith('Int'):
+            null_fill_value = 0
+        elif pandas_dtype.startswith('int'):
+            null_fill_value = 0
+        elif pandas_dtype.startswith('Float') or pandas_dtype.startswith('float'):
+            null_fill_value = 0.0
+        elif pandas_dtype == 'boolean' or pandas_dtype == 'bool':
+            null_fill_value = False
+        elif pandas_dtype.startswith('datetime') and col != 'detection_end_date':
+            null_fill_value = '1970-01-01T00:00:00'  # No nanoseconds
+        elif pandas_dtype.startswith('datetime') and col == 'detection_end_date':
+            null_fill_value = '2079-01-01 05:00:00+00:00'  # No nanoseconds
+        else:
+            null_fill_value = ''
+
+        print(f'  - name: {col}')
+        print(f'    type: {pyarrow_type}')
+        print(f'    null_fill_value: {null_fill_value}')
+        
+def print_dataframe_bigquery_schema_yaml(df, name):
+    # Map pandas dtypes to BigQuery types
+    pandas_to_bigquery_types = {
+        'Int64': 'INT64',
+        'int64': 'INT64',
+        'int32': 'INT64',
+        'Float64': 'FLOAT64',
+        'float64': 'FLOAT64',
+        'boolean': 'BOOL',
+        'bool': 'BOOL',
+        'datetime64[ns]': 'TIMESTAMP',
+        'object': 'STRING',
+        'category': 'STRING'
+    }
+
+    print(f'{name}_bigquery_schema:')
+
+    for col in df.columns:
+        pandas_dtype = str(df[col].dtype)
+        bigquery_type = pandas_to_bigquery_types.get(pandas_dtype, 'STRING')
+
+        # Determine a suitable null fill value
+        if pandas_dtype.startswith('Int'):
+            null_fill_value = 0
+        elif pandas_dtype.startswith('int'):
+            null_fill_value = 0
+        elif pandas_dtype.startswith('Float') or pandas_dtype.startswith('float'):
+            null_fill_value = 0.0
+        elif pandas_dtype == 'boolean' or pandas_dtype == 'bool':
+            null_fill_value = False
+        elif pandas_dtype.startswith('datetime') and col != 'detection_end_date':
+            null_fill_value = '1970-01-01T00:00:00'  # No nanoseconds
+        elif pandas_dtype.startswith('datetime') and col == 'detection_end_date':
+            null_fill_value = '2079-01-01 05:00:00+00:00'  # No nanoseconds
+        else:
+            null_fill_value = ''
+
+        print(f'  - name: {col}')
+        print(f'    type: {bigquery_type}')
+        print(f'    mode: NULLABLE')  # Assuming all fields are nullable
+        print(f'    description: ""')  # Optional: Add descriptions
+        print(f'    null_fill_value: {null_fill_value}')
+        
+
+def print_dataframe_bigquery_schema_json(df, name):
+    # Map pandas dtypes to BigQuery types
+    pandas_to_bigquery_types = {
+        'Int64': 'INT64',
+        'int64': 'INT64',
+        'int32': 'INT64',
+        'Float64': 'FLOAT64',
+        'float64': 'FLOAT64',
+        'boolean': 'BOOL',
+        'bool': 'BOOL',
+        'datetime64[ns]': 'TIMESTAMP',
+        'object': 'STRING',
+        'category': 'STRING'
+    }
+
+    schema_fields = []
+
+    for col in df.columns:
+        pandas_dtype = str(df[col].dtype)
+        bigquery_type = pandas_to_bigquery_types.get(pandas_dtype, 'STRING')
+
+        # Here we set a default description and maxLength for demonstration.
+        # You can implement logic to determine these based on your needs.
+        field_description = "this is a field"
+        field_max_length = "200"
+
+        # mode is set to NULLABLE by default
+        field_mode = "NULLABLE"
+
+        # Create a dictionary for each field
+        field_dict = {
+            "name": col,
+            "type": bigquery_type,
+            "mode": field_mode,
+            "description": field_description,
+            "maxLength": field_max_length
+        }
+
+        schema_fields.append(field_dict)
+
+    # Print the schema as a JSON array
+    print(json.dumps(schema_fields, indent=4))
+
+def time_to_seconds(time_str):
+    """
+    Convert a time string in HH:MM:SS, MM:SS format, or a plain numeric string to seconds.
+    If the format is invalid, return None.
+    """
+    try:
+        if isinstance(time_str, str):
+            if ":" in time_str:
+                # Handle time in HH:MM:SS or MM:SS format
+                parts = list(map(int, time_str.split(":")))
+                if len(parts) == 3:  # HH:MM:SS
+                    return int(parts[0] * 3600 + parts[1] * 60 + parts[2])
+                elif len(parts) == 2:  # MM:SS
+                    return int(parts[0] * 60 + parts[1])
+            elif time_str.isdigit():  # Plain numeric string
+                return int(time_str)
+        elif isinstance(time_str, (int, float)):  # Already in seconds as a number
+            return int(time_str)
+    except (ValueError, AttributeError):
+        pass
+    return None
 
 def preprocess_dataframe(df_config):
     """

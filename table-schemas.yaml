@@ -225,6 +225,8 @@ encodings_python_schema:
     type: string
   - name: segments_year
     type: string
+  - name: segments_format_id_group
+    type: Int64
   - name: year
     type: Int64
   - name: month
@@ -568,6 +570,9 @@ encodings_parquet_schema:
   - name: segments_year
     type: string
     null_fill_value: 
+  - name: segments_format_id_group
+    type: int64
+    null_fill_value: 0
   - name: year
     type: int64
     null_fill_value: 0
