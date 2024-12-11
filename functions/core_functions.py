@@ -48,6 +48,7 @@ import dask.dataframe as dd
 import ast
 from minio import Minio
 from minio.error import S3Error
+from concurrent.futures import ProcessPoolExecutor
 
 dask.config.set({"dataframe.backend": "cudf"})
 
@@ -127,6 +128,8 @@ def fix_df_dtypes(df):
             df[col] = df[col].astype(str)
         elif df[col].dtype == 'int64':
             df[col] = df[col].astype('Int64')
+        elif df[col].dtype == 'float64':
+            df[col] = df[col].astype('Float64')
         elif df[col].dtype == 'bool':
             df[col] = df[col].astype('boolean')
         elif df[col].dtype == 'datetime64[ns]':
@@ -410,7 +413,7 @@ def generate_uuid():
     return str(uuid.uuid4())
 
 def write_hive_partitioned_parquet(
-    df, output_bucket, output_prefix, partition_cols, gcs_options, max_records_per_file=1_000_000, spec='gcs'
+    df, output_bucket, output_prefix, partition_cols, gcs_options, max_records_per_file=20_000_000, spec='gcs'
 ):
     import math
     import uuid
@@ -457,7 +460,7 @@ def write_hive_partitioned_parquet(
             
 # 
 def write_hive_partitioned_parquet_s4(
-    df, output_bucket, output_prefix, partition_cols, storage_options, max_records_per_file=1_000_000, spec='gcs'
+    df, output_bucket, output_prefix, partition_cols, storage_options, max_records_per_file=20_000_000, spec='gcs'
 ):
     import math
     import uuid
@@ -659,6 +662,162 @@ def process_encodings_segments(df, media='TV'):
 
     return df
 
+def process_detections_segments(df, media='TV'):
+    df['segments_date'] = pd.to_datetime(df['date_time'])
+    df['segments_day_of_week'] = pd.to_datetime(df['date_time']).dt.day_name().astype('string')
+    df['segments_media'] =  media
+        
+    df['segments_month_label'] = pd.to_datetime(df['date_time']).dt.to_period('M').astype('string')
+    df['segments_quarter_label'] = pd.to_datetime(df['date_time']).dt.to_period('Q').astype('string')
+    df['segments_week_label'] = pd.to_datetime(df['date_time']).dt.to_period('W').astype('string')
+
+    # Convert timestamp to periods and then use start_time to get the first day of the period
+    df['segments_month'] = pd.to_datetime(df['date_time']).dt.to_period('M').dt.start_time.dt.date.astype('string')
+    df['segments_quarter'] = pd.to_datetime(df['date_time']).dt.to_period('Q').dt.start_time.dt.date.astype('string')
+    df['segments_week'] = pd.to_datetime(df['date_time']).dt.to_period('W').dt.start_time.dt.date.astype('string')
+
+    # Year can remain as a period or also be converted similarly if needed
+    df['segments_year'] = pd.to_datetime(df['date_time']).dt.to_period('Y').astype('string')
+    df['segments_broadcast_year'] = df['bc_year_index'].astype('Int64')
+    df['segments_broadcast_month_index'] = df['bcm_index'].astype('Float64')
+    df['segments_broadcast_week_index'] = df['bcw_index'].astype('Float64')
+    df['year'] = df['segments_date'].dt.year.astype('Int64')
+    df['month'] = df['segments_date'].dt.month.astype('Int64')
+    df['day'] = df['segments_date'].dt.day.astype('Int64')
+    df['segments_date'] = df['segments_date'].dt.date.astype('string')
+    df['detection_timestamp'] = df['date_time'].dt.strftime('%Y-%m-%d %H:%M:%S')
+    df['date_time'] = df['date_time'].dt.strftime('%Y-%m-%d %H:%M:%S')
+    df['encoded_timestamp'] = df['encoded_timestamp'].dt.strftime('%Y-%m-%d %H:%M:%S')
+    
+    df['billing_last_updated'] = df['billing_last_updated'].dt.strftime('%Y-%m-%d %H:%M:%S')
+    df['bcw_start_date'] = df['bcw_start_date'].dt.strftime('%Y-%m-%d %H:%M:%S')
+    df['bcw_end_date'] = df['bcw_end_date'].dt.strftime('%Y-%m-%d %H:%M:%S')
+    
+
+    return df
+
+# Define the processing function
+# Define the processing function for each chunk
+# def process_detections_segments_chunk(chunk, media='TV'):
+#     # Perform processing
+#     chunk['segments_date'] = pd.to_datetime(chunk['date_time'])
+#     chunk['segments_day_of_week'] = pd.to_datetime(chunk['date_time']).dt.day_name().astype('string')
+#     chunk['segments_media'] = media
+
+#     chunk['segments_month_label'] = pd.to_datetime(chunk['date_time']).dt.tz_localize(None).dt.to_period('M').astype('string')
+#     chunk['segments_quarter_label'] = pd.to_datetime(chunk['date_time']).dt.tz_localize(None).dt.to_period('Q').astype('string')
+#     chunk['segments_week_label'] = pd.to_datetime(chunk['date_time']).dt.tz_localize(None).dt.to_period('W').astype('string')
+
+#     chunk['segments_month'] = pd.to_datetime(chunk['date_time']).dt.tz_localize(None).dt.to_period('M').dt.start_time.dt.date.astype('string')
+#     chunk['segments_quarter'] = pd.to_datetime(chunk['date_time']).dt.tz_localize(None).dt.to_period('Q').dt.start_time.dt.date.astype('string')
+#     chunk['segments_week'] = pd.to_datetime(chunk['date_time']).dt.tz_localize(None).dt.to_period('W').dt.start_time.dt.date.astype('string')
+
+#     chunk['segments_year'] = pd.to_datetime(chunk['date_time']).dt.tz_localize(None).dt.to_period('Y').astype('string')
+#     chunk['segments_broadcast_year'] = chunk['bc_year_index'].astype('Int64')
+#     chunk['segments_broadcast_month_index'] = chunk['bcm_index'].astype('Float64')
+#     chunk['segments_broadcast_week_index'] = chunk['bcw_index'].astype('Float64')
+#     chunk['year'] = chunk['segments_date'].dt.year.astype('Int64')
+#     chunk['month'] = chunk['segments_date'].dt.month.astype('Int64')
+#     chunk['day'] = chunk['segments_date'].dt.day.astype('Int64')
+#     chunk['segments_date'] = chunk['segments_date'].dt.date.astype('string')
+#     chunk['detection_timestamp'] = chunk['date_time'].dt.strftime('%Y-%m-%d %H:%M:%S')
+#     chunk['date_time'] = chunk['date_time'].dt.strftime('%Y-%m-%d %H:%M:%S')
+#     chunk['encoded_timestamp'] = chunk['encoded_timestamp'].dt.strftime('%Y-%m-%d %H:%M:%S')
+
+#     chunk['billing_last_updated'] = chunk['billing_last_updated'].dt.strftime('%Y-%m-%d %H:%M:%S')
+#     chunk['bcw_start_date'] = chunk['bcw_start_date'].dt.strftime('%Y-%m-%d %H:%M:%S')
+#     chunk['bcw_end_date'] = chunk['bcw_end_date'].dt.strftime('%Y-%m-%d %H:%M:%S')
+
+#     # Clean up temporary variables if needed
+#     gc.collect()  # Explicitly run garbage collection
+#     return chunk
+
+# # Parallel processing function with garbage collection
+# def process_detections_in_parallel(df, media='TV', num_workers=10, chunk_size=50000):
+#     # Split DataFrame into chunks
+#     chunks = [df[i:i + chunk_size] for i in range(0, len(df), chunk_size)]
+    
+#     # Process chunks in parallel
+#     with ProcessPoolExecutor(max_workers=num_workers) as executor:
+#         results = executor.map(process_detections_segments_chunk, chunks, [media] * len(chunks))
+    
+#     # Concatenate the processed chunks into a single DataFrame
+#     processed_df = pd.concat(results, ignore_index=True)
+#     del results
+#     # Perform garbage collection after combining chunks
+#     del chunks
+#     gc.collect()  # Explicitly free memory used by temporary objects
+
+#     return processed_df
+
+def process_detections_segments_chunk(chunk, media='TV'):
+    """
+    Process a chunk of data (list of dictionaries) and return the processed chunk as a list of dictionaries.
+    """
+    for row in chunk:
+        # Convert date_time to datetime object
+        date_time = datetime.fromisoformat(row['date_time'])
+        row['segments_date'] = date_time.date().isoformat()
+        row['segments_day_of_week'] = date_time.strftime('%A')  # Day name
+        row['segments_media'] = media
+
+        # Generate labels
+        row['segments_month_label'] = date_time.strftime('%Y-%m')
+        row['segments_quarter_label'] = f"Q{(date_time.month - 1) // 3 + 1}-{date_time.year}"
+        row['segments_week_label'] = date_time.strftime('%Y-W%U')
+
+        # Period calculations
+        row['segments_month'] = f"{date_time.year}-{date_time.month:02}-01"
+        row['segments_quarter'] = f"{date_time.year}-{'01-01' if date_time.month <= 3 else '04-01' if date_time.month <= 6 else '07-01' if date_time.month <= 9 else '10-01'}"
+        row['segments_week'] = (date_time - pd.Timedelta(days=date_time.weekday())).date().isoformat()
+
+        # Year and period
+        row['segments_year'] = str(date_time.year)
+        row['year'] = date_time.year
+        row['month'] = date_time.month
+        row['day'] = date_time.day
+
+        # Formatting other date-related columns
+        row['detection_timestamp'] = date_time.strftime('%Y-%m-%d %H:%M:%S')
+        row['date_time'] = date_time.strftime('%Y-%m-%d %H:%M:%S')
+
+        # Optional timestamp columns
+        if 'encoded_timestamp' in row:
+            encoded_ts = datetime.fromisoformat(row['encoded_timestamp'])
+            row['encoded_timestamp'] = encoded_ts.strftime('%Y-%m-%d %H:%M:%S')
+        if 'billing_last_updated' in row:
+            billing_last_updated = datetime.fromisoformat(row['billing_last_updated'])
+            row['billing_last_updated'] = billing_last_updated.strftime('%Y-%m-%d %H:%M:%S')
+        if 'bcw_start_date' in row:
+            bcw_start_date = datetime.fromisoformat(row['bcw_start_date'])
+            row['bcw_start_date'] = bcw_start_date.strftime('%Y-%m-%d %H:%M:%S')
+        if 'bcw_end_date' in row:
+            bcw_end_date = datetime.fromisoformat(row['bcw_end_date'])
+            row['bcw_end_date'] = bcw_end_date.strftime('%Y-%m-%d %H:%M:%S')
+
+    gc.collect()  # Explicit garbage collection
+    return chunk
+
+def process_detections_in_parallel(data, media='TV', num_workers=10, chunk_size=50000):
+    """
+    Process data in parallel using dictionaries and return the processed result as a list of dictionaries.
+    """
+    # Split data into chunks
+    chunks = [data[i:i + chunk_size] for i in range(0, len(data), chunk_size)]
+    
+    # Process chunks in parallel
+    with ProcessPoolExecutor(max_workers=num_workers) as executor:
+        results = executor.map(process_detections_segments_chunk, chunks, [media] * len(chunks))
+    
+    # Combine the processed chunks
+    processed_data = [record for chunk in results for record in chunk]
+    processed_data = sorted(
+        processed_data,
+        key=lambda x: (x['year'], x['month'], x['bcm_index'], x['bcw_index'], x['day'], x['occurrence_id'])
+    )
+    gc.collect()  # Free memory after combining
+    return processed_data
+
 def time_to_seconds(time_str):
     """
     Convert a time string in HH:MM:SS, MM:SS format, or a plain numeric string to seconds.
@@ -759,7 +918,7 @@ def assign_segment_group(format_id):
     return segment_group
 
 def print_dataframe_python_schema(df, name):
-    print(f"{name}_python_schema")
+    print(f"{name}_python_schema:")
     for col in df.columns:
         print(f'  - name: {col}')
         print(f'    type: {df[col].dtype}')
@@ -894,27 +1053,6 @@ def print_dataframe_bigquery_schema_json(df, name):
     # Print the schema as a JSON array
     print(json.dumps(schema_fields, indent=4))
 
-def time_to_seconds(time_str):
-    """
-    Convert a time string in HH:MM:SS, MM:SS format, or a plain numeric string to seconds.
-    If the format is invalid, return None.
-    """
-    try:
-        if isinstance(time_str, str):
-            if ":" in time_str:
-                # Handle time in HH:MM:SS or MM:SS format
-                parts = list(map(int, time_str.split(":")))
-                if len(parts) == 3:  # HH:MM:SS
-                    return int(parts[0] * 3600 + parts[1] * 60 + parts[2])
-                elif len(parts) == 2:  # MM:SS
-                    return int(parts[0] * 60 + parts[1])
-            elif time_str.isdigit():  # Plain numeric string
-                return int(time_str)
-        elif isinstance(time_str, (int, float)):  # Already in seconds as a number
-            return int(time_str)
-    except (ValueError, AttributeError):
-        pass
-    return None
 
 def preprocess_dataframe(df_config):
     """

@@ -6,5 +6,5 @@ def load_yaml_config(file_path):
     return config
 
 
-config = load_config('/home/developer/keys/project-keys/colab-settings.yaml')
+config = load_yaml_config('/home/developer/keys/project-keys/colab-settings.yaml')
 print(config)

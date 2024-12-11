@@ -582,5 +582,436 @@ encodings_parquet_schema:
   - name: day
     type: int64
     null_fill_value: 0
-
+detections_python_schema:
+  - name: occurrence_id
+    type: Float64
+  - name: encoding_id
+    type: Int64
+  - name: detection_timestamp
+    type: object
+  - name: date_time
+    type: object
+  - name: broadcaster_id
+    type: Int64
+  - name: cost
+    type: Float64
+  - name: tv_show_id
+    type: Int64
+  - name: origin
+    type: object
+  - name: group_occurrence_id
+    type: Int64
+  - name: year
+    type: Int64
+  - name: month
+    type: Int64
+  - name: day
+    type: Int64
+  - name: process_month_group
+    type: object
+  - name: last_updated
+    type: object
+  - name: last_audit_id
+    type: object
+  - name: affiliate
+    type: object
+  - name: callsign
+    type: object
+  - name: dma_id
+    type: object
+  - name: kantar_region
+    type: object
+  - name: neustar_id
+    type: Int64
+  - name: name
+    type: object
+  - name: timezone
+    type: object
+  - name: dma_rank
+    type: Int64
+  - name: show_record_id
+    type: object
+  - name: show_id
+    type: Int64
+  - name: is_barter
+    type: boolean
+  - name: is_cable
+    type: boolean
+  - name: is_network
+    type: boolean
+  - name: is_spot
+    type: boolean
+  - name: is_canadian
+    type: boolean
+  - name: is_hispanic
+    type: boolean
+  - name: is_local_cable
+    type: boolean
+  - name: is_active
+    type: boolean
+  - name: length
+    type: Int64
+  - name: show_name
+    type: object
+  - name: geo_location
+    type: Int64
+  - name: geo_type
+    type: object
+  - name: geo_latitude
+    type: Float64
+  - name: geo_longitude
+    type: Float64
+  - name: geo_city
+    type: object
+  - name: geo_state
+    type: object
+  - name: geo_country
+    type: object
+  - name: geo_neustar_id
+    type: Int64
+  - name: geo_us_msa_id
+    type: Int64
+  - name: geo_us_county_fips_id
+    type: Int64
+  - name: geo_ca_cma_id
+    type: Int64
+  - name: geo_gm_zip_code
+    type: object
+  - name: isci
+    type: object
+  - name: aeis_id
+    type: Int64
+  - name: encoded_timestamp
+    type: object
+  - name: format_id
+    type: Int64
+  - name: format_name
+    type: object
+  - name: customer_id
+    type: Int64
+  - name: customer_name
+    type: object
+  - name: sfdc_account_id
+    type: object
+  - name: sfdc_account_name
+    type: object
+  - name: sfdc_advertiser_id
+    type: object
+  - name: attributes_cable_estimate
+    type: object
+  - name: attributes_spot_estimate
+    type: object
+  - name: encoder_group_id
+    type: Int64
+  - name: encoder_id
+    type: Int64
+  - name: encoder_group_name
+    type: object
+  - name: length_in_seconds
+    type: Int64
+  - name: billing_last_updated
+    type: object
+  - name: billing_last_audit_id
+    type: object
+  - name: clone_of
+    type: Int64
+  - name: segments_format_id_group
+    type: Int64
+  - name: bcw_id
+    type: object
+  - name: bcw_index
+    type: Float64
+  - name: bcm_index
+    type: Float64
+  - name: bcw_start_date
+    type: object
+  - name: bcw_end_date
+    type: object
+  - name: bc_year_index
+    type: Int64
+  - name: segments_date
+    type: string
+  - name: segments_day_of_week
+    type: string
+  - name: segments_media
+    type: object
+  - name: segments_month_label
+    type: string
+  - name: segments_quarter_label
+    type: string
+  - name: segments_week_label
+    type: string
+  - name: segments_month
+    type: string
+  - name: segments_quarter
+    type: string
+  - name: segments_week
+    type: string
+  - name: segments_year
+    type: string
+  - name: segments_broadcast_year
+    type: Int64
+  - name: segments_broadcast_month_index
+    type: Float64
+  - name: segments_broadcast_week_index
+    type: Float64
+detections_parquet_schema:
+  - name: occurrence_id
+    type: double
+    null_fill_value: 0.0
+  - name: encoding_id
+    type: int64
+    null_fill_value: 0
+  - name: detection_timestamp
+    type: string
+    null_fill_value: 
+  - name: date_time
+    type: string
+    null_fill_value: 
+  - name: broadcaster_id
+    type: int64
+    null_fill_value: 0
+  - name: cost
+    type: double
+    null_fill_value: 0.0
+  - name: tv_show_id
+    type: int64
+    null_fill_value: 0
+  - name: origin
+    type: string
+    null_fill_value: 
+  - name: group_occurrence_id
+    type: int64
+    null_fill_value: 0
+  - name: year
+    type: int64
+    null_fill_value: 0
+  - name: month
+    type: int64
+    null_fill_value: 0
+  - name: day
+    type: int64
+    null_fill_value: 0
+  - name: process_month_group
+    type: string
+    null_fill_value: 
+  - name: last_updated
+    type: string
+    null_fill_value: 
+  - name: last_audit_id
+    type: string
+    null_fill_value: 
+  - name: affiliate
+    type: string
+    null_fill_value: 
+  - name: callsign
+    type: string
+    null_fill_value: 
+  - name: dma_id
+    type: string
+    null_fill_value: 
+  - name: kantar_region
+    type: string
+    null_fill_value: 
+  - name: neustar_id
+    type: int64
+    null_fill_value: 0
+  - name: name
+    type: string
+    null_fill_value: 
+  - name: timezone
+    type: string
+    null_fill_value: 
+  - name: dma_rank
+    type: int64
+    null_fill_value: 0
+  - name: show_record_id
+    type: string
+    null_fill_value: 
+  - name: show_id
+    type: int64
+    null_fill_value: 0
+  - name: is_barter
+    type: bool
+    null_fill_value: False
+  - name: is_cable
+    type: bool
+    null_fill_value: False
+  - name: is_network
+    type: bool
+    null_fill_value: False
+  - name: is_spot
+    type: bool
+    null_fill_value: False
+  - name: is_canadian
+    type: bool
+    null_fill_value: False
+  - name: is_hispanic
+    type: bool
+    null_fill_value: False
+  - name: is_local_cable
+    type: bool
+    null_fill_value: False
+  - name: is_active
+    type: bool
+    null_fill_value: False
+  - name: length
+    type: int64
+    null_fill_value: 0
+  - name: show_name
+    type: string
+    null_fill_value: 
+  - name: geo_location
+    type: int64
+    null_fill_value: 0
+  - name: geo_type
+    type: string
+    null_fill_value: 
+  - name: geo_latitude
+    type: double
+    null_fill_value: 0.0
+  - name: geo_longitude
+    type: double
+    null_fill_value: 0.0
+  - name: geo_city
+    type: string
+    null_fill_value: 
+  - name: geo_state
+    type: string
+    null_fill_value: 
+  - name: geo_country
+    type: string
+    null_fill_value: 
+  - name: geo_neustar_id
+    type: int64
+    null_fill_value: 0
+  - name: geo_us_msa_id
+    type: int64
+    null_fill_value: 0
+  - name: geo_us_county_fips_id
+    type: int64
+    null_fill_value: 0
+  - name: geo_ca_cma_id
+    type: int64
+    null_fill_value: 0
+  - name: geo_gm_zip_code
+    type: string
+    null_fill_value: 
+  - name: isci
+    type: string
+    null_fill_value: 
+  - name: aeis_id
+    type: int64
+    null_fill_value: 0
+  - name: encoded_timestamp
+    type: string
+    null_fill_value: 
+  - name: format_id
+    type: int64
+    null_fill_value: 0
+  - name: format_name
+    type: string
+    null_fill_value: 
+  - name: customer_id
+    type: int64
+    null_fill_value: 0
+  - name: customer_name
+    type: string
+    null_fill_value: 
+  - name: sfdc_account_id
+    type: string
+    null_fill_value: 
+  - name: sfdc_account_name
+    type: string
+    null_fill_value: 
+  - name: sfdc_advertiser_id
+    type: string
+    null_fill_value: 
+  - name: attributes_cable_estimate
+    type: string
+    null_fill_value: 
+  - name: attributes_spot_estimate
+    type: string
+    null_fill_value: 
+  - name: encoder_group_id
+    type: int64
+    null_fill_value: 0
+  - name: encoder_id
+    type: int64
+    null_fill_value: 0
+  - name: encoder_group_name
+    type: string
+    null_fill_value: 
+  - name: length_in_seconds
+    type: int64
+    null_fill_value: 0
+  - name: billing_last_updated
+    type: string
+    null_fill_value: 
+  - name: billing_last_audit_id
+    type: string
+    null_fill_value: 
+  - name: clone_of
+    type: int64
+    null_fill_value: 0
+  - name: segments_format_id_group
+    type: int64
+    null_fill_value: 0
+  - name: bcw_id
+    type: string
+    null_fill_value: 
+  - name: bcw_index
+    type: double
+    null_fill_value: 0.0
+  - name: bcm_index
+    type: double
+    null_fill_value: 0.0
+  - name: bcw_start_date
+    type: string
+    null_fill_value: 
+  - name: bcw_end_date
+    type: string
+    null_fill_value: 
+  - name: bc_year_index
+    type: int64
+    null_fill_value: 0
+  - name: segments_date
+    type: string
+    null_fill_value: 
+  - name: segments_day_of_week
+    type: string
+    null_fill_value: 
+  - name: segments_media
+    type: string
+    null_fill_value: 
+  - name: segments_month_label
+    type: string
+    null_fill_value: 
+  - name: segments_quarter_label
+    type: string
+    null_fill_value: 
+  - name: segments_week_label
+    type: string
+    null_fill_value: 
+  - name: segments_month
+    type: string
+    null_fill_value: 
+  - name: segments_quarter
+    type: string
+    null_fill_value: 
+  - name: segments_week
+    type: string
+    null_fill_value: 
+  - name: segments_year
+    type: string
+    null_fill_value: 
+  - name: segments_broadcast_year
+    type: int64
+    null_fill_value: 0
+  - name: segments_broadcast_month_index
+    type: double
+    null_fill_value: 0.0
+  - name: segments_broadcast_week_index
+    type: double
+    null_fill_value: 0.0
 
