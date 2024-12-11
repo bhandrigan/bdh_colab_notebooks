@@ -609,6 +609,8 @@ detections_python_schema:
     type: Int64
   - name: process_month_group
     type: object
+  - name: week_within_month
+    type: Int64
   - name: last_updated
     type: object
   - name: last_audit_id
@@ -795,6 +797,9 @@ detections_parquet_schema:
   - name: process_month_group
     type: string
     null_fill_value: 
+  - name: week_within_month
+    type: int64
+    null_fill_value: 0
   - name: last_updated
     type: string
     null_fill_value: 
