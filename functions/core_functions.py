@@ -696,6 +696,40 @@ def process_detections_segments(df, media='TV'):
 
     return df
 
+def process_activity_sessions_segments(df, media='DIGITAL'):
+    df['segments_date'] = pd.to_datetime(df['created_time'])
+    df['segments_day_of_week'] = pd.to_datetime(df['segments_date']).dt.tz_localize(None).dt.day_name().astype('string')
+    df['segments_media'] =  media
+        
+    df['segments_month_label'] = pd.to_datetime(df['segments_date']).dt.tz_localize(None).dt.to_period('M').astype('string')
+    df['segments_quarter_label'] = pd.to_datetime(df['segments_date']).dt.tz_localize(None).dt.to_period('Q').astype('string')
+    df['segments_week_label'] = pd.to_datetime(df['segments_date']).dt.tz_localize(None).dt.to_period('W').astype('string')
+
+    # Convert timestamp to periods and then use start_time to get the first day of the period
+    df['segments_month'] = pd.to_datetime(df['segments_date']).dt.tz_localize(None).dt.to_period('M').dt.start_time.dt.date.astype('string')
+    df['segments_quarter'] = pd.to_datetime(df['segments_date']).dt.tz_localize(None).dt.to_period('Q').dt.start_time.dt.date.astype('string')
+    df['segments_week'] = pd.to_datetime(df['segments_date']).dt.tz_localize(None).dt.to_period('W').dt.start_time.dt.date.astype('string')
+
+    # Year can remain as a period or also be converted similarly if needed
+    df['segments_year'] = pd.to_datetime(df['segments_date']).dt.tz_localize(None).dt.to_period('Y').astype('string')
+    df['segments_broadcast_year'] = df['bc_year_index'].astype('Int64')
+    df['segments_broadcast_month_index'] = df['bcm_index'].astype('Float64')
+    df['segments_broadcast_week_index'] = df['bcw_index'].astype('Float64')
+    df['year'] = df['segments_date'].dt.year.astype('Int64')
+    df['month'] = df['segments_date'].dt.month.astype('Int64')
+    df['day'] = df['segments_date'].dt.day.astype('Int64')
+    df['segments_date'] = df['segments_date'].dt.date.astype('string')
+    df['detection_timestamp'] = df['date_time'].dt.strftime('%Y-%m-%d %H:%M:%S')
+    df['date_time'] = df['date_time'].dt.strftime('%Y-%m-%d %H:%M:%S')
+    df['encoded_timestamp'] = df['encoded_timestamp'].dt.strftime('%Y-%m-%d %H:%M:%S')
+    
+    df['billing_last_updated'] = df['billing_last_updated'].dt.strftime('%Y-%m-%d %H:%M:%S')
+    df['bcw_start_date'] = df['bcw_start_date'].dt.strftime('%Y-%m-%d %H:%M:%S')
+    df['bcw_end_date'] = df['bcw_end_date'].dt.strftime('%Y-%m-%d %H:%M:%S')
+    
+
+    return df
+
 # Define the processing function
 # Define the processing function for each chunk
 def process_detections_segments_chunk(chunk, media='TV'):
