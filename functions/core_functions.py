@@ -696,7 +696,35 @@ def process_detections_segments(df, media='TV'):
 
     return df
 
-def process_activity_sessions_segments(df, media='DIGITAL'):
+def process_activity_sessions_segments(df, _bcc_df, geo_z_df, geo_d_df, media='DIGITAL'):
+    df['key'] = 1
+    _bcc_df['key'] = 1
+    df['activity_date_time'] = pd.to_datetime(df['created_time'])
+    _bcc_df['bcw_start_date'] = pd.to_datetime(_bcc_df['bcw_start_date'])
+    _bcc_df['bcw_end_date'] = pd.to_datetime(_bcc_df['bcw_end_date'])
+    ref_df = None
+    ref_df = _bcc_df.loc[(_bcc_df['bcw_start_date'] >= df['activity_date_time'].min()) & (_bcc_df['bcw_end_date'] <= df['activity_date_time'].max())]
+    merged_df = None
+    merged_df = pd.merge(df, ref_df, on='key').drop(['key', 'activity_date_time'], axis=1)
+    merged_df.sort_values(by=['id'], inplace=True)
+    merged_df = merged_df.drop_duplicates(subset=['id'], keep='first')
+    del merged_df
+    gc.collect()
+    df = merged_df
+    df['_YEAR'] = df['created_time'].dt.year.astype('Int64')
+    df['_MONTH'] = df['created_time'].dt.month.astype('Int64')
+    df['_DAY'] = df['created_time'].dt.day.astype('Int64')
+    
+    activity_sessions_with_geos_df = df.merge(geo_z_df, how='left', left_on='zip_code', right_on='geo_location')
+    del df
+    gc.collect()
+    activity_sessions_with_geos_df['neustar_dma_id'] = activity_sessions_with_geos_df['neustar_dma_id'].astype('string')
+    activity_sessions_with_geos_df.loc[activity_sessions_with_geos_df['neustar_country'].isin(['us', 'ca']) & activity_sessions_with_geos_df['geo_country'].isnull()] = activity_sessions_with_geos_df.loc[activity_sessions_with_geos_df['neustar_country'].isin(['us', 'ca']) & activity_sessions_with_geos_df['geo_country'].isnull()].merge(geo_d_df, how='left', left_on='neustar_dma_id', right_on='geo_location')
+    activity_sessions_with_geos_df['neustar_dma_id'] = activity_sessions_with_geos_df['neustar_dma_id'].astype('Int64')
+    activity_sessions_with_geos_df.sort_values(by=['id', 'created_time'], ascending=[True, False] ,inplace=True)
+    df = activity_sessions_with_geos_df.drop_duplicates(subset=['id'], keep='first').sort_values(by='created_time').copy().reset_index(drop=True)
+    del activity_sessions_with_geos_df
+    gc.collect()
     df['segments_date'] = pd.to_datetime(df['created_time'])
     df['segments_day_of_week'] = pd.to_datetime(df['segments_date']).dt.tz_localize(None).dt.day_name().astype('string')
     df['segments_media'] =  media
@@ -715,13 +743,12 @@ def process_activity_sessions_segments(df, media='DIGITAL'):
     df['segments_broadcast_year'] = df['bc_year_index'].astype('Int64')
     df['segments_broadcast_month_index'] = df['bcm_index'].astype('Float64')
     df['segments_broadcast_week_index'] = df['bcw_index'].astype('Float64')
-    df['year'] = df['segments_date'].dt.year.astype('Int64')
-    df['month'] = df['segments_date'].dt.month.astype('Int64')
-    df['day'] = df['segments_date'].dt.day.astype('Int64')
+    df['_YEAR'] = df['segments_date'].dt.year.astype('Int64')
+    df['_MONTH'] = df['segments_date'].dt.month.astype('Int64')
+    df['_DAY'] = df['segments_date'].dt.day.astype('Int64')
     df['segments_date'] = df['segments_date'].dt.date.astype('string')
-    df['detection_timestamp'] = df['date_time'].dt.strftime('%Y-%m-%d %H:%M:%S')
+    df['session_timestamp'] = df['date_time'].dt.strftime('%Y-%m-%d %H:%M:%S')
     df['date_time'] = df['date_time'].dt.strftime('%Y-%m-%d %H:%M:%S')
-    df['encoded_timestamp'] = df['encoded_timestamp'].dt.strftime('%Y-%m-%d %H:%M:%S')
     
     df['last_updated'] = df['billing_last_updated'].dt.strftime('%Y-%m-%d %H:%M:%S')
     df['last_updated_audit_id'] = uuid.uuid4()
