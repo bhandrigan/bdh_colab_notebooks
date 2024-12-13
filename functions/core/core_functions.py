@@ -905,6 +905,27 @@ def time_to_seconds(time_str):
 def remove_subseconds(timestamp):
     return timestamp.split('.')[0] + timestamp[-6:] if '.' in timestamp else timestamp
 
+def generate_bcw_df(min_date, max_date, broadcast_cal_df):
+    # Ensure inputs are datetime objects
+    min_date = datetime.strptime(min_date, "%Y-%m-%d")
+    max_date = datetime.strptime(max_date, "%Y-%m-%d")
+    bcw_df = None
+    
+    # Start from the Monday of the week containing min_date
+    current_date = min_date - timedelta(days=min_date.weekday())
+    
+    # Generate list of Mondays as strings
+    monday_midnights = []
+    while current_date <= max_date:
+        monday_midnights.append(current_date.strftime("%Y-%m-%d"))  # Convert to string
+        current_date += timedelta(weeks=1)  # Increment by 1 week
+    for date in monday_midnights:
+        print(date)
+        bcw_df = pd.concat([bcw_df, broadcast_cal_df.loc[broadcast_cal_df['bcw_start_date'] == date]])
+    
+    return bcw_df
+
+
 def preprocess_df(
     df,
     date_cols=None,

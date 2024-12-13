@@ -35,9 +35,9 @@ def load_encodings_for_detections(storage_options, bucket_name, hive_table_path,
 
     # Convert the dataset to a PyArrow Table
     table = dataset.to_table()
-    table_subset = table.select(['encoding_id', 'isci', 'aeis_id', 'encoded_timestamp', 'format_id', 'format_name', 'customer_id', 'customer_name', 'sfdc_account_id', 'sfdc_account_name', 'sfdc_advertiser_id','attributes_cable_estimate', 'attributes_spot_estimate',
-                             'encoder_group_id',  'encoder_id', 'encoder_group_name', 'length_in_seconds',
-                             'billing_last_updated', 'billing_last_audit_id', 'clone_of', 'segments_format_id_group'])
+    # table_subset = table.select(['encoding_id', 'isci', 'aeis_id', 'encoded_timestamp', 'format_id', 'format_name', 'customer_id', 'customer_name', 'sfdc_account_id', 'sfdc_account_name', 'sfdc_advertiser_id','attributes_cable_estimate', 'attributes_spot_estimate',
+    #                          'encoder_group_id',  'encoder_id', 'encoder_group_name', 'length_in_seconds',
+    #                          'billing_last_updated', 'billing_last_audit_id', 'clone_of', 'segments_format_id_group'])
 
     # Optionally, convert to pandas DataFrame
     df = table_subset.to_pandas()
