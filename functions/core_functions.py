@@ -723,7 +723,8 @@ def process_activity_sessions_segments(df, media='DIGITAL'):
     df['date_time'] = df['date_time'].dt.strftime('%Y-%m-%d %H:%M:%S')
     df['encoded_timestamp'] = df['encoded_timestamp'].dt.strftime('%Y-%m-%d %H:%M:%S')
     
-    df['billing_last_updated'] = df['billing_last_updated'].dt.strftime('%Y-%m-%d %H:%M:%S')
+    df['last_updated'] = df['billing_last_updated'].dt.strftime('%Y-%m-%d %H:%M:%S')
+    df['last_updated_audit_id'] = uuid.uuid4()
     df['bcw_start_date'] = df['bcw_start_date'].dt.strftime('%Y-%m-%d %H:%M:%S')
     df['bcw_end_date'] = df['bcw_end_date'].dt.strftime('%Y-%m-%d %H:%M:%S')
     
