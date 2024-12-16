@@ -1019,4 +1019,170 @@ detections_parquet_schema:
   - name: segments_broadcast_week_index
     type: double
     null_fill_value: 0.0
-
+activity_sessions_python_schema:
+  - name: activity_session_id
+    type: object
+  - name: uuid
+    type: object
+  - name: created_time
+    type: object
+  - name: neustar_dma_id
+    type: Int64
+  - name: neustar_country
+    type: object
+  - name: neustar_state
+    type: object
+  - name: url
+    type: object
+  - name: domain
+    type: object
+  - name: zip_code
+    type: object
+  - name: lat
+    type: Float64
+  - name: lon
+    type: Float64
+  - name: calculated_source
+    type: object
+  - name: fb_ad_id
+    type: object
+  - name: fb_ad_set_id
+    type: object
+  - name: fbcampaignid
+    type: object
+  - name: snap_ad_id
+    type: object
+  - name: snap_ad_squad_id
+    type: object
+  - name: snap_campaign_id
+    type: object
+  - name: tw_line_item_id
+    type: object
+  - name: tw_campaign_id
+    type: object
+  - name: is_bot
+    type: boolean
+  - name: device_type
+    type: object
+  - name: device_model
+    type: object
+  - name: hour
+    type: Int64
+  - name: city
+    type: object
+  - name: session_id
+    type: object
+  - name: numPvs
+    type: Int64
+  - name: gclid
+    type: object
+  - name: brand_id
+    type: object
+  - name: year
+    type: Int64
+  - name: month
+    type: Int64
+  - name: day
+    type: Int64
+  - name: sfdc_account_id
+    type: object
+  - name: sfdc_account_name
+    type: object
+  - name: sfdc_advertiser_id
+    type: object
+  - name: ip_address
+    type: object
+  - name: activity_session_timestamp
+    type: datetime64[us, UTC]
+  - name: process_month_group
+    type: object
+  - name: bcw_monday_match
+    type: datetime64[us, UTC]
+  - name: week_within_month
+    type: Int64
+  - name: row_num
+    type: Int64
+  - name: activity_date_time
+    type: datetime64[us, UTC]
+  - name: click_view_gclid
+    type: string
+  - name: bcw_id
+    type: object
+  - name: bcw_index
+    type: Float64
+  - name: bcm_index
+    type: Float64
+  - name: bcw_start_date
+    type: object
+  - name: bcw_start_datetime_match
+    type: datetime64[us, UTC]
+  - name: bcw_end_date
+    type: object
+  - name: bcw_end_datetime_match
+    type: datetime64[us, UTC]
+  - name: bcw_year
+    type: Int64
+  - name: _YEAR
+    type: Int64
+  - name: _MONTH
+    type: Int64
+  - name: _WEEK_WITHIN_MONTH
+    type: Int64
+  - name: _DAY
+    type: Int64
+  - name: geo_location
+    type: object
+  - name: geo_type
+    type: object
+  - name: geo_latitude
+    type: Float64
+  - name: geo_longitude
+    type: Float64
+  - name: geo_city
+    type: object
+  - name: geo_state
+    type: object
+  - name: geo_country
+    type: object
+  - name: geo_neustar_id
+    type: Int64
+  - name: geo_us_msa_id
+    type: object
+  - name: geo_us_county_fips_id
+    type: object
+  - name: geo_ca_cma_id
+    type: object
+  - name: geo_gm_zip_code
+    type: object
+  - name: segments_date
+    type: string
+  - name: segments_day_of_week
+    type: string
+  - name: segments_media
+    type: object
+  - name: segments_month_label
+    type: string
+  - name: segments_quarter_label
+    type: string
+  - name: segments_week_label
+    type: string
+  - name: segments_month
+    type: string
+  - name: segments_quarter
+    type: string
+  - name: segments_week
+    type: string
+  - name: segments_year
+    type: string
+  - name: segments_broadcast_year
+    type: Int64
+  - name: segments_broadcast_month_index
+    type: Float64
+  - name: segments_broadcast_week_index
+    type: Float64
+  - name: session_timestamp
+    type: object
+  - name: activity_session_last_updated
+    type: datetime64[us, UTC]
+  - name: activity_session_last_audit_id
+    type: object
