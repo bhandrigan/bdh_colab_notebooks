@@ -41,7 +41,7 @@ import fsspec
 import gc
 import numpy as np
 import dask.dataframe as dd  # Use Dask for parallel processing
-# from cudf import DataFrame as cudf  # Uncomment for GPU-accelerated processing with cuDF
+# from cudf import DataFrame as cudf  # Uncomment for GPU-accelerated processing with cuDF 
 import cudf
 import dask
 import dask.dataframe as dd
@@ -522,32 +522,219 @@ def extract_url_data(df, url_column, skip_gclid_fb_bing=False):
 
     return df
 
-# Priority list of URL parameters
+# # Priority list of URL parameters
+# tracking_url_params = [
+#     'gclid', 'gad_source', 'gbraid', 'wbraid', 'dclid',       # Google Ads
+#     'fbclid', 'fbc', 'fbp',                                    # Facebook Ads
+#     'msclkid', 'msadid', 'mstokid',                            # Microsoft Ads
+#     'ttduid', 'bwid',                                          # CTV Specific
+#     'twclid',                                                  # Twitter Ads
+#     'li_fat_id',                                               # LinkedIn Ads
+#     'snapcid',                                                 # Snapchat Ads
+#     'ttclid',                                                  # TikTok Ads
+#     'pinterest_sclcid',                                        # Pinterest Ads
+#     'uid', 'uid2', 'uid3'                                      # Session, User, Conversion IDs
+# ]
+
+# def set_tracking_info(row, param_suffix='', url_col='url'):
+#     """
+#     Extract the tracking source from the URL or row without using urlparse.
+#     """
+#     # Get the URL value from the row
+#     url = row[url_col]
+
+#     # Ensure the URL is a valid string
+#     if not url or not isinstance(url, str):
+#         return pd.Series([None, None])  # Return None if the URL is invalid
+
+#     # Split the URL into query parameters
+#     if '?' in url:
+#         query_string = url.split('?', 1)[1]  # Extract the query string after '?'
+#         query_params = query_string.split('&')  # Split into individual parameters
+#     else:
+#         query_params = []  # No query string in the URL
+
+#     # Iterate over the prioritized list of parameters
+#     for param in tracking_url_params:
+#         # Check for the parameter in the query string
+#         for qp in query_params:
+#             if qp.startswith(f"{param}="):
+#                 param_val = qp.split('=', 1)[1]  # Extract the parameter value
+#                 return pd.Series([param_val, param])  # Return the parameter value and name
+
+#         # Check the row for full parameter with suffix
+#         full_param = f"{param}{param_suffix}"
+#         if full_param in row and pd.notna(row[full_param]) and row[full_param] != '':
+#             return pd.Series([row[full_param], param])  # Return the parameter value and name
+
+#     # Return None if no tracking parameter is found
+#     return pd.Series([None, None])
+
+# # Expanded list of known social, search, shopping, and video referrers
+# social_referrers = {
+#     'facebook.com': 'facebook',
+#     'meta.com': 'meta',
+#     'instagram.com': 'instagram',
+#     'linkedin.com': 'linkedin',
+#     'twitter.com': 'twitter',
+#     'tiktok.com': 'tiktok',
+#     'snapchat.com': 'snapchat',
+#     'pinterest.com': 'pinterest',
+#     'reddit.com': 'reddit',
+#     'tumblr.com': 'tumblr',
+#     'quora.com': 'quora'
+# }
+
+# search_referrers = {
+#     'google.com': 'google',
+#     'bing.com': 'bing',
+#     'yahoo.com': 'yahoo',
+#     'duckduckgo.com': 'duckduckgo',
+#     'baidu.com': 'baidu',
+#     'yandex.com': 'yandex',
+#     'ask.com': 'ask'
+# }
+
+# shopping_referrers = {
+#     'amazon.com': 'amazon',
+#     'ebay.com': 'ebay',
+#     'walmart.com': 'walmart',
+#     'target.com': 'target',
+#     'bestbuy.com': 'bestbuy',
+#     'etsy.com': 'etsy',
+#     'shopify.com': 'shopify'
+# }
+
+# video_referrers = {
+#     'youtube.com': 'youtube',
+#     'vimeo.com': 'vimeo',
+#     'dailymotion.com': 'dailymotion',
+#     'twitch.tv': 'twitch'
+# }
+
+# # List of tracking types associated with paid ads
+# url_params_for_source = [
+#     'gclid', 'gad_source', 'gbraid', 'wbraid', 'dclid',       # Google Ads
+#     'fbclid', 'fbc', 'fbp',                                    # Facebook Ads
+#     'msclkid', 'msadid', 'mstokid',                            # Microsoft Ads
+#     'ttduid', 'bwid',                                          # CTV Specific
+#     'twclid',                                                  # Twitter Ads
+#     'li_fat_id',                                               # LinkedIn Ads
+#     'snapcid',                                                 # Snapchat Ads
+#     'ttclid',                                                  # TikTok Ads
+#     'pinterest_sclcid'                                       # Pinterest Ads
+
+# ]
+
+# def get_base_domain(url):
+#     try:
+#         # Parse the URL and get the netloc (domain)
+#         domain = urlparse.urlparse(url).netloc
+#         # Split domain by '.' and join the last two segments to get the base domain
+#         return '.'.join(domain.split('.')[-2:])
+#     except Exception:
+#         return None  # Return None if URL parsing fails
+
+# def get_full_domain_and_path(url):
+#     try:
+#         # Parse the URL
+#         parsed_url = urlparse.urlparse(url)
+#         # Get the full domain (netloc) and the page path
+#         full_domain = parsed_url.netloc
+#         page_path = parsed_url.path
+#         return f'{full_domain}{page_path}'
+#     except Exception:
+#         return None  # Return None if parsing fails
+
+# def calculate_source(referrer, url=None, tracking_type=None):
+#     """
+#     Calculate the source of a web session based on the referrer.
+#     If the referrer is unknown and the domain is found in the URL, set source to 'direct'.
+#     """
+#     # Check if there's no referrer
+#     if not referrer or referrer.replace(' ', '') == '':
+#         if url and get_base_domain(url) in url:
+#             return 'direct'
+#         return 'direct'
+
+#     # Normalize referrer (remove protocol and trailing slash)
+#     referrer_domain = get_base_domain(referrer)
+#         # Priority 1: Check for explicit tracking type
+#     # Priority 1: Check for explicit tracking type
+#     if tracking_type:
+#         if tracking_type in ['gclid', 'gad_source', 'gbraid', 'wbraid', 'dclid']:
+#             return 'google-paid'
+#         elif tracking_type in ['fbclid', 'fbc', 'fbp']:
+#             return 'facebook-paid'
+#         elif tracking_type in ['msclkid', 'msadid', 'mstokid']:
+#             return 'microsoft-paid'
+#         elif tracking_type in ['ttduid']:
+#             return 'thetradedesk-paid'
+#         elif tracking_type in ['amzclid']:
+#             return 'amazon-paid'
+#         elif tracking_type in ['bwid']:
+#             return 'ott-paid'
+#         elif tracking_type in ['rtd_cid']:
+#             return 'real-time-decision-paid'
+#         elif tracking_type in ['aff_id']:
+#             return 'affiliate-paid'
+#         elif tracking_type in ['li_fat_id']:
+#             return 'linkedin-paid'
+#         elif tracking_type in ['snapcid']:
+#             return 'snapchat-paid'
+#         elif tracking_type in ['pinterest_sclcid']:
+#             return 'pinterest-paid'
+#         elif tracking_type in ['twclid']:
+#             return 'twitter-paid'
+#         elif tracking_type in ['ttclid']:
+#             return 'tiktok-paid'
+        
+#     # Check for social referrers
+#     for social_domain, source in social_referrers.items():
+#         if social_domain in referrer_domain:
+#             return f"{source}-paid" if tracking_type in url_params_for_source else source
+
+#     # Check for search referrers
+#     for search_domain, source in search_referrers.items():
+#         if search_domain in referrer_domain:
+#             return f"{source}-paid" if tracking_type in url_params_for_source else f"{source}-organic"
+
+#     # Check for shopping referrers
+#     for shopping_domain, source in shopping_referrers.items():
+#         if shopping_domain in referrer_domain:
+#             return f"{source}-paid" if tracking_type in url_params_for_source else source
+
+#     # Check for video referrers
+#     for video_domain, source in video_referrers.items():
+#         if video_domain in referrer_domain:
+#             return f"{source}-paid" if tracking_type in url_params_for_source else source
+
+#     # If the referrer is unknown, check for the domain in the URL
+#     base_referrer_domain = referrer_domain.split('/')[0]
+#     if url and base_referrer_domain in url:
+#         return 'direct'
+#     else:
+#         # Default to the base domain as source
+#         return base_referrer_domain
+
+import pandas as pd
+from concurrent.futures import ProcessPoolExecutor
+
+# Tracking URL Parameters
 tracking_url_params = [
-    'gclid', 'gad_source', 'gbraid', 'wbraid', 'dclid',       # Google Ads
-    'fbclid', 'fbc', 'fbp',                                    # Facebook Ads
-    'msclkid', 'msadid', 'mstokid',                            # Microsoft Ads
-    'ttduid', 'bwid',                                          # CTV Specific
-    'twclid',                                                  # Twitter Ads
-    'li_fat_id',                                               # LinkedIn Ads
-    'snapcid',                                                 # Snapchat Ads
-    'ttclid',                                                  # TikTok Ads
-    'pinterest_sclcid',                                        # Pinterest Ads
-    'uid', 'uid2', 'uid3'                                      # Session, User, Conversion IDs
+    'gclid', 'gad_source', 'gbraid', 'wbraid', 'dclid',  # Google Ads
+    'fbclid', 'fbc', 'fbp',                              # Facebook Ads
+    'msclkid', 'msadid', 'mstokid',                      # Microsoft Ads
+    'ttduid', 'bwid',                                    # CTV Specific
+    'twclid',                                            # Twitter Ads
+    'li_fat_id',                                         # LinkedIn Ads
+    'snapcid',                                           # Snapchat Ads
+    'ttclid',                                            # TikTok Ads
+    'pinterest_sclcid',                                  # Pinterest Ads
+    'uid', 'uid2', 'uid3'                                # Session, User, Conversion IDs
 ]
 
-
-def set_tracking_info(row, param_suffix=''):
-    # Iterate over the prioritized list of parameters with optional suffix
-    for param in tracking_url_params:
-        full_param = f"{param}{param_suffix}"
-        if full_param in row and pd.notna(row[full_param]) and row[full_param] != '':
-            # Return the first non-null, non-empty parameter and its name
-            return pd.Series([row[full_param], param])
-    # Return None if no parameter was found
-    return pd.Series([None, None])
-
-# Expanded list of known social, search, shopping, and video referrers
+# Known referrer mappings
 social_referrers = {
     'facebook.com': 'facebook',
     'meta.com': 'meta',
@@ -589,72 +776,112 @@ video_referrers = {
     'twitch.tv': 'twitch'
 }
 
-# List of tracking types associated with paid ads
-url_params_for_source = [
-    'gclid', 'gad_source', 'gbraid', 'wbraid', 'dclid',       # Google Ads
-    'fbclid', 'fbc', 'fbp',                                    # Facebook Ads
-    'msclkid', 'msadid', 'mstokid',                            # Microsoft Ads
-    'ttduid', 'bwid',                                          # CTV Specific
-    'twclid',                                                  # Twitter Ads
-    'li_fat_id',                                               # LinkedIn Ads
-    'snapcid',                                                 # Snapchat Ads
-    'ttclid',                                                  # TikTok Ads
-    'pinterest_sclcid'                                       # Pinterest Ads
+url_params_for_source = tracking_url_params
 
-]
-
+# Function to extract the base domain from a URL
 def get_base_domain(url):
     try:
-        # Parse the URL and get the netloc (domain)
-        domain = urlparse.urlparse(url).netloc
-        # Split domain by '.' and join the last two segments to get the base domain
+        domain = url.split('//')[-1].split('/')[0]
         return '.'.join(domain.split('.')[-2:])
     except Exception:
-        return None  # Return None if URL parsing fails
+        return None
 
-def get_full_domain_and_path(url):
-    try:
-        # Parse the URL
-        parsed_url = urlparse.urlparse(url)
-        # Get the full domain (netloc) and the page path
-        full_domain = parsed_url.netloc
-        page_path = parsed_url.path
-        return f'{full_domain}{page_path}'
-    except Exception:
-        return None  # Return None if parsing fails
-
-def calculate_source(referrer, tracking_type=None):
-    # Check if there's no referrer
-    if not referrer:
+# Function to calculate the source
+def calculate_source(referrer, url=None, tracking_type=None):
+    if not referrer or referrer.strip() == '':
+        if url and get_base_domain(url) in url:
+            return 'direct'
         return 'direct'
 
-    # Normalize referrer (remove protocol and trailing slash)
     referrer_domain = get_base_domain(referrer)
-    # referrer_domain = re.sub(r'^https?://(www\.)?', '', referrer).strip('/')
+    if tracking_type:
+        if tracking_type in ['gclid', 'gad_source', 'gbraid', 'wbraid', 'dclid']:
+            return 'google-paid'
+        elif tracking_type in ['fbclid', 'fbc', 'fbp']:
+            return 'facebook-paid'
+        elif tracking_type in ['msclkid', 'msadid', 'mstokid']:
+            return 'microsoft-paid'
+        elif tracking_type in ['ttduid']:
+            return 'thetradedesk-paid'
+        elif tracking_type in ['amzclid']:
+            return 'amazon-paid'
+        elif tracking_type in ['bwid']:
+            return 'ott-paid'
+        elif tracking_type in ['rtd_cid']:
+            return 'real-time-decision-paid'
+        elif tracking_type in ['aff_id']:
+            return 'affiliate-paid'
+        elif tracking_type in ['li_fat_id']:
+            return 'linkedin-paid'
+        elif tracking_type in ['snapcid']:
+            return 'snapchat-paid'
+        elif tracking_type in ['pinterest_sclcid']:
+            return 'pinterest-paid'
+        elif tracking_type in ['twclid']:
+            return 'twitter-paid'
+        elif tracking_type in ['ttclid']:
+            return 'tiktok-paid'
 
-    # Check for social referrers
     for social_domain, source in social_referrers.items():
         if social_domain in referrer_domain:
             return f"{source}-paid" if tracking_type in url_params_for_source else source
 
-    # Check for search referrers
     for search_domain, source in search_referrers.items():
         if search_domain in referrer_domain:
-            return f"{source}-paid" if tracking_type in url_params_for_source else source
+            return f"{source}-paid" if tracking_type in url_params_for_source else f"{source}-organic"
 
-    # Check for shopping referrers
     for shopping_domain, source in shopping_referrers.items():
         if shopping_domain in referrer_domain:
             return f"{source}-paid" if tracking_type in url_params_for_source else source
 
-    # Check for video referrers
     for video_domain, source in video_referrers.items():
         if video_domain in referrer_domain:
             return f"{source}-paid" if tracking_type in url_params_for_source else source
 
-    # If it's not a known referrer, use the base domain as source
-    base_domain = referrer_domain.split('/')[0]
-    return base_domain
+    base_referrer_domain = referrer_domain.split('/')[0]
+    if url and base_referrer_domain in url:
+        return 'direct'
+    else:
+        return base_referrer_domain
+
+# Function to extract tracking info
+def set_tracking_info(row, param_suffix='', url_col='url'):
+    url = row[url_col]
+    if not url or not isinstance(url, str):
+        return pd.Series([None, None])
+    if '?' in url:
+        query_string = url.split('?', 1)[1]
+        query_params = query_string.split('&')
+    else:
+        query_params = []
+
+    for param in tracking_url_params:
+        for qp in query_params:
+            if qp.startswith(f"{param}="):
+                param_val = qp.split('=', 1)[1]
+                return pd.Series([param_val, param])
+        full_param = f"{param}{param_suffix}"
+        if full_param in row and pd.notna(row[full_param]) and row[full_param] != '':
+            return pd.Series([row[full_param], param])
+    return pd.Series([None, None])
+
+# Function to process a single row
+def process_row(row):
+    referrer = row.get('referrer')
+    url = row.get('url')
+    tracking_type = row.get('tracking_type')
+
+    source = calculate_source(referrer, url, tracking_type)
+    tracking_value, tracking_param = set_tracking_info(row)
+    
+    return pd.Series({'source': source, 'tracking_value': tracking_value, 'tracking_param': tracking_param})
+
+# Function to process the DataFrame in parallel
+def parallel_process(df, workers=10):
+    with ProcessPoolExecutor(max_workers=workers) as executor:
+        results = list(executor.map(process_row, [row for _, row in df.iterrows()]))
+    return pd.DataFrame(results)
+
 # 
 def write_hive_partitioned_parquet_s4(
     df, output_bucket, output_prefix, partition_cols, storage_options, max_records_per_file=5_000_000, spec='gcs'
